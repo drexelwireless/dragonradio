@@ -31,9 +31,10 @@ def prbs15(seed, count):
 def reference_frame(info, payload, mcsidx, bps, data, pilots, nfft=128, cp=16, user=1, max_payload=2048):
     """Independent NumPy transmitter written from the NativeFrame.hh format text."""
     nd = len(data)
-    H = -(-112 // (2 * nd))
+    # Wire format v3 (uncoded payload): 16-byte header with FEC codes 0, 0.
+    H = -(-128 // (2 * nd))
     P = -(-((len(payload) + 4) * 8) // (bps * nd))
-    header = bytes([0xD2]) + bytes(info) + bytes([mcsidx, bps]) + struct.pack(">H", len(payload))
+    header = bytes([0xD3]) + bytes(info) + bytes([mcsidx, bps, 0, 0]) + struct.pack(">H", len(payload))
     header += struct.pack(">I", zlib.crc32(header))
     body = bytes(payload) + struct.pack(">I", zlib.crc32(bytes(payload)))
     signed = lambda k: k - nfft if k >= nfft // 2 else k
@@ -43,7 +44,7 @@ def reference_frame(info, payload, mcsidx, bps, data, pilots, nfft=128, cp=16, u
     max_symbols = H + -(-((max_payload + 4) * 8) // (2 * nd))
     scramble = prbs15(0x2A00 + user, 4 * max_symbols * nd)
     hbits = np.zeros(2 * H * nd, np.uint8)
-    hbits[:112] = np.unpackbits(np.frombuffer(header, np.uint8))
+    hbits[:128] = np.unpackbits(np.frombuffer(header, np.uint8))
     pbits = np.zeros(bps * P * nd, np.uint8)
     pbits[:len(body) * 8] = np.unpackbits(np.frombuffer(body, np.uint8))
     hbits ^= scramble[:hbits.size]

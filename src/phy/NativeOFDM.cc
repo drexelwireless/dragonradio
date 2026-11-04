@@ -16,6 +16,18 @@
 using dragonradio::native::FrameHeader;
 using dragonradio::native::FramedPHY;
 using dragonradio::native::FramedStream;
+namespace nfec = dragonradio::native::fec;
+
+// liquid FEC scheme -> native code (same code, framing and puncturing; see
+// NativeFEC.hh and tests/fullstack/test_native_fec.cc).
+static std::optional<nfec::Code> nativeCode(fec_scheme fs)
+{
+    const char *liquid_name = fec_scheme_str[fs][0];
+    for (int c = 0; c < nfec::kNumCodes; ++c)
+        if (std::strcmp(liquid_name, nfec::name(static_cast<nfec::Code>(c))) == 0)
+            return static_cast<nfec::Code>(c);
+    return std::nullopt;
+}
 
 static_assert(sizeof(Header) == dragonradio::native::kHeaderInfoBytes,
               "native frame header carries exactly one DragonRadio Header");
@@ -25,12 +37,25 @@ NativeOFDM::NativeOFDM(const std::vector<std::pair<liquid::MCS, AutoGain>> &mcs_
                        unsigned int cp_len,
                        const std::optional<std::string> &subcarriers,
                        unsigned int max_payload,
-                       unsigned int chase_bits)
+                       unsigned int chase_bits,
+                       bool soft_payload,
+                       const std::string &header_fec)
   : M_(M)
   , cp_len_(cp_len)
   , max_payload_(max_payload)
   , chase_bits_(chase_bits)
+  , soft_payload_(soft_payload)
+  , header_fec_(nfec::kNone)
+  , max_on_air_(0)
 {
+    if (header_fec == "v27")
+        header_fec_ = nfec::kV27;
+    else if (header_fec == "v29")
+        header_fec_ = nfec::kV29;
+    else if (header_fec != "none")
+        throw std::invalid_argument("native-ofdm header FEC must be none, v27 or v29");
+    if (header_fec_ != nfec::kNone && !nfec::kAvailable)
+        throw std::invalid_argument("native-ofdm coded header needs native FEC, which this build lacks");
     if (mcs_table.empty())
         throw std::invalid_argument("native-ofdm needs at least one MCS");
     if (max_payload > 65535)
@@ -53,15 +78,20 @@ NativeOFDM::NativeOFDM(const std::vector<std::pair<liquid::MCS, AutoGain>> &mcs_
     for (unsigned i = 0; i < mcs_table.size(); ++i) {
         const liquid::MCS &mcs = mcs_table[i].first;
         int bps = mcs.ms == LIQUID_MODEM_QPSK ? 2 : mcs.ms == LIQUID_MODEM_QAM16 ? 4 : 0;
-        if (mcs.check != LIQUID_CRC_32 || mcs.fec0 != LIQUID_FEC_NONE || mcs.fec1 != LIQUID_FEC_NONE || bps == 0) {
+        auto f0 = nativeCode(mcs.fec0), f1 = nativeCode(mcs.fec1);
+        const bool coded = (f0 && *f0 != nfec::kNone) || (f1 && *f1 != nfec::kNone);
+        if (mcs.check != LIQUID_CRC_32 || !f0 || !f1 || bps == 0 || (coded && !nfec::kAvailable)) {
             std::stringstream msg;
             msg << "native-ofdm does not support MCS " << i << " (" << mcs.description()
-                << "); supported: crc32, no FEC, QPSK or 16-QAM";
+                << "); supported: crc32, QPSK or 16-QAM, FEC none, rs8, v27, v29 or their punctured rates"
+                << (nfec::kAvailable ? "" : " (this build has no native FEC: only FEC none)");
             throw std::invalid_argument(msg.str());
         }
         mcs_.push_back(mcs);
         bps_.push_back(bps);
+        fec_.push_back({*f0, *f1});
     }
+    max_on_air_ = FramedPHY::max_coded_bytes(static_cast<int>(max_payload), fec_);
     PHY::mcs_table.resize(mcs_.size());
     for (unsigned i = 0; i < mcs_.size(); ++i)
         PHY::mcs_table[i] = { &mcs_[i], mcs_table[i].second, true };
@@ -76,9 +106,20 @@ std::unique_ptr<FramedPHY> NativeOFDM::mkFrame(void) const
     // fftw::mutex, and the engine additionally takes its own planner lock.
     std::lock_guard<std::mutex> lock(fftw::mutex);
 
-    return std::make_unique<FramedPHY>(static_cast<int>(M_), static_cast<int>(cp_len_),
-                                       data_bins_, pilot_bins_,
-                                       static_cast<int>(max_payload_), static_cast<int>(chase_bits_));
+    auto frame = std::make_unique<FramedPHY>(static_cast<int>(M_), static_cast<int>(cp_len_),
+                                             data_bins_, pilot_bins_,
+                                             static_cast<int>(max_payload_), static_cast<int>(chase_bits_),
+                                             1, max_on_air_, header_fec_);
+    frame->soft = soft_payload_;
+    return frame;
+}
+
+std::vector<std::pair<std::string, std::string>> NativeOFDM::getFEC(void) const
+{
+    std::vector<std::pair<std::string, std::string>> out;
+    for (auto [f0, f1] : fec_)
+        out.push_back({nfec::name(f0), nfec::name(f1)});
+    return out;
 }
 
 size_t NativeOFDM::getModulatedSize(mcsidx_t mcsidx, size_t n)
@@ -87,7 +128,8 @@ size_t NativeOFDM::getModulatedSize(mcsidx_t mcsidx, size_t n)
         throw std::out_of_range("MCS index out of range");
 
     std::unique_ptr<FramedPHY> frame = mkFrame();
-    size_t samples = frame->frame_samples(static_cast<int>(sizeof(ExtendedHeader) + n), bps_[mcsidx]);
+    size_t samples = frame->frame_samples(static_cast<int>(sizeof(ExtendedHeader) + n), bps_[mcsidx],
+                                          fec_[mcsidx].first, fec_[mcsidx].second);
 
     std::lock_guard<std::mutex> lock(fftw::mutex);
     frame.reset();
@@ -134,7 +176,8 @@ void NativeOFDM::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
         throw std::length_error("packet exceeds native-ofdm maximum payload");
 
     const int bps = native_.bps_[pkt->mcsidx];
-    const int nsamples = frame_->frame_samples(static_cast<int>(pkt->size()), bps);
+    const auto [fec0, fec1] = native_.fec_[pkt->mcsidx];
+    const int nsamples = frame_->frame_samples(static_cast<int>(pkt->size()), bps, fec0, fec1);
     auto iqbuf = std::make_shared<IQBuf>(nsamples);
 
     frame_->write(reinterpret_cast<const unsigned char*>(&pkt->hdr),
@@ -143,7 +186,9 @@ void NativeOFDM::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
                   pkt->data(),
                   static_cast<int>(pkt->size()),
                   iqbuf->data(),
-                  nsamples);
+                  nsamples,
+                  fec0,
+                  fec1);
 
     // Apply soft gain.
     if (g != 1.0)

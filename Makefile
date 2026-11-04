@@ -35,6 +35,11 @@ LIBS += -lFLAC++ -lFLAC
 # Needed for FFTW
 LIBS += -lfftw3
 
+# Native PHY coding (src/simulation/NativeFEC.hh) uses libcorrect's libfec
+# shim, which build.sh installs before liquid-dsp.
+CPPFLAGS += -DDRAGONRADIO_NATIVE_FEC
+LIBS += -lfec
+
 # Needed for xsimd
 CPPFLAGS += -Idependencies/xsimd/include
 

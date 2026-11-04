@@ -197,6 +197,10 @@ class Config:
         # CRC-32, uncoded QPSK/16-QAM MCS entries until matched FEC exists.
         self.native_max_payload = 4096
         self.native_chase_bits = 4
+        # Header section code (none, v27, v29); a link parameter both ends
+        # must share. v29 (r1/2 K=9, soft) gives the header the robustness
+        # of liquid's coded (v29p78) header.
+        self.native_header_fec = 'v29'
 
         # MAC parameters
         self.mac = 'tdma-fdma'
@@ -753,6 +757,10 @@ class Config:
                             dest='native_max_payload',
                             metavar='BYTES',
                             help='set largest native-ofdm payload (bytes)')
+        native.add_argument('--native-header-fec', action='store',
+                            choices=['none', 'v27', 'v29'],
+                            dest='native_header_fec',
+                            help='set native-ofdm header section code')
         native.add_argument('--native-chase-bits', action='store', type=int,
                             dest='native_chase_bits',
                             metavar='N',

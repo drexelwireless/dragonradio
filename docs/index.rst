@@ -16,6 +16,7 @@ Welcome to DragonRadio's documentation!
    native-revision
    native-fullstack
    fullstack-simulation
+   native-fec
    ota-grid
    characterization
    container

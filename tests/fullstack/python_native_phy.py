@@ -1,6 +1,7 @@
 # Run with the dragonradio executable: dragonradio tests/fullstack/python_native_phy.py
 # Constructs the native PHY through the embedded Python module exactly as
-# radio.py does, and checks that unsupported coding is rejected.
+# radio.py does, accepts the production coded tables (rs8, convolutional
+# codes) and rejects unsupported entries.
 import sys
 import _dragonradio
 
@@ -21,7 +22,17 @@ check(list(phy.bits_per_symbol) == [2, 4], "QPSK and 16-QAM table")
 check(len(phy.subcarriers) == 48, "subcarrier mask " + phy.subcarriers)
 check(phy.getModulatedSize(0, 1500) > phy.getModulatedSize(1, 1500) > 0, "16-QAM frame shorter than QPSK")
 check(phy.min_rx_rate_oversample == 1 and phy.min_tx_rate_oversample == 1, "1x oversampling")
-for bad in (liquid.MCS('crc32', 'none', 'rs8', 'qpsk'), liquid.MCS('crc32', 'v29p78', 'none', 'qpsk'),
+check(radio.NativeOFDM.fec_available, "native FEC built")
+check(list(phy.fec) == [('none', 'none'), ('none', 'none')] and phy.soft_payload and phy.header_fec == 'none',
+      "uncoded table, soft decoding and uncoded header by default")
+hdr = radio.NativeOFDM(table, 48, 6, None, 4096, 4, True, 'v29')
+check(hdr.header_fec == 'v29' and hdr.getModulatedSize(0, 100) > phy.getModulatedSize(0, 100), "coded header is longer")
+# The production payload code (rs8) and convolutional codes are accepted.
+coded = radio.NativeOFDM([(liquid.MCS('crc32', 'rs8', 'none', 'qpsk'), radio.AutoGain()),
+                          (liquid.MCS('crc32', 'none', 'v29p78', 'qam16'), radio.AutoGain())], 48, 6, None, 4096, 4, False)
+check(list(coded.fec) == [('rs8', 'none'), ('none', 'v29p78')] and not coded.soft_payload, "coded table " + str(list(coded.fec)))
+check(coded.getModulatedSize(0, 1500) > phy.getModulatedSize(0, 1500), "rs8 frame longer than uncoded")
+for bad in (liquid.MCS('crc32', 'none', 'h74', 'qpsk'), liquid.MCS('crc32', 'v39', 'none', 'qpsk'),
             liquid.MCS('crc32', 'none', 'none', 'qam64'), liquid.MCS('crc16', 'none', 'none', 'qpsk')):
     try:
         radio.NativeOFDM([(bad, radio.AutoGain())], 48, 6)
@@ -33,7 +44,8 @@ for bad in (liquid.MCS('crc32', 'none', 'rs8', 'qpsk'), liquid.MCS('crc32', 'v29
 sys.path.insert(0, 'python/dragonradio')
 try:
     from dragonradio.radio.config import Config
-    check(Config().native_max_payload == 4096 and Config().native_chase_bits == 4, "configuration defaults")
+    check(Config().native_max_payload == 4096 and Config().native_chase_bits == 4 and Config().native_header_fec == 'v29',
+          "configuration defaults")
     config = Config()
     # As scripts/standalone-radio.py does: parse straight into the Config.
     config.parser().parse_args(['--phy', 'native-ofdm', '--native-max-payload', '2048', '--native-chase-bits', '0'],

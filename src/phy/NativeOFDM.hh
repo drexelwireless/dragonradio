@@ -81,7 +81,9 @@ public:
                unsigned int cp_len,
                const std::optional<std::string> &subcarriers,
                unsigned int max_payload = 4096,
-               unsigned int chase_bits = 4);
+               unsigned int chase_bits = 4,
+               bool soft_payload = true,
+               const std::string &header_fec = "none");
     ~NativeOFDM() override = default;
 
     NativeOFDM(const NativeOFDM&) = delete;
@@ -99,6 +101,14 @@ public:
     std::string getSubcarriers(void) const { return mask_; }
     /** @brief Bits per payload symbol for each MCS index (2 or 4) */
     const std::vector<int> &getBitsPerSymbol(void) const { return bps_; }
+    /** @brief Inner and outer FEC code names for each MCS index */
+    std::vector<std::pair<std::string, std::string>> getFEC(void) const;
+    /** @brief Decode coded payloads from soft bits (as liquid's soft_payload) */
+    bool getSoftPayload(void) const { return soft_payload_; }
+    /** @brief Header section code: none, v27 or v29 (a link parameter) */
+    std::string getHeaderFEC(void) const { return dragonradio::native::fec::name(header_fec_); }
+    /** @brief True if this build supports coded MCS entries */
+    static bool fecAvailable(void) { return dragonradio::native::fec::kAvailable; }
 
 protected:
     std::shared_ptr<PHY::PacketModulator> mkPacketModulator(void) override;
@@ -109,10 +119,14 @@ protected:
 
 private:
     unsigned int M_, cp_len_, max_payload_, chase_bits_;
+    bool soft_payload_;
+    dragonradio::native::fec::Code header_fec_;
+    int max_on_air_;
     std::string mask_;
     std::vector<int> data_bins_, pilot_bins_;
     std::vector<liquid::MCS> mcs_;
     std::vector<int> bps_;
+    std::vector<std::pair<dragonradio::native::fec::Code, dragonradio::native::fec::Code>> fec_;
 };
 
 #endif /* PHY_NATIVEOFDM_HH_ */

@@ -639,3 +639,43 @@ Runs are wall-clock paced; deterministic virtual time is not implemented. Still
 open in P2: deterministic virtual time, device gain modeling, the
 collaboration controller, and larger or multi-hop networks. Next: those P2 items, or P3 (matched
 FEC), so the production coded MCS tables can run on the native PHY.
+
+
+## 14. P3 status, 2026-11-04: matched FEC
+
+Implemented and measured on gridgpu01, in simulation only (details:
+`docs/native-fec.rst`).
+
+- **Production FEC in the workspace.** The P1 workspace had built liquidDSP
+  without libfec, so `rs8` and `v29p78` were unavailable. The setup now
+  installs the pinned libcorrect and its libfec shim first, as `build.sh`
+  does. The production configuration tier (liquid `rs8` with the `v29p78`
+  header) runs.
+- **Native coding.** `src/simulation/NativeFEC.hh` ports liquid's packetizer
+  (CRC-32, whitening, two FEC and interleaver stages, Reed-Solomon blocking,
+  `v27`/`v29` with all punctured rates) and uses libcorrect through the
+  libfec API. It is bit-for-bit identical to liquid's packetizer on 1632
+  encodings. Decoders agree on 4896 corrupted and 544 soft cases
+  (`tests/fullstack/test_native_fec.cc`).
+- **Wire format v3.** The native header (16 bytes, format `0xD3`) carries the
+  inner and outer code. NativeOFDM accepts CRC-32 QPSK/16-QAM entries with any
+  of those codes and soft or hard decoding.
+- **Coded header.** `--native-header-fec` (none, v27, v29; default v29) codes
+  the header section, soft decoded.
+- **PER against theory** (AWGN, real acquisition, 1000 packets of 1000 bytes
+  per point):
+  - With the coded header, native is within 0.1 dB of ideal theory for `rs8`
+    and hard `v27`, 0.9 dB for soft `v27`, and 0.3 dB uncoded.
+  - Liquid needs 1.3–1.7 dB more for the same codes.
+  - The uncoded native header capped every code near 11 dB.
+  - Chase gains 1.2 dB uncoded, at up to twice the demodulation time where it
+    searches.
+- **Full stack.** All 23 P2 scenarios pass with the coded header. Native `rs8`
+  and liquid production pass the clean, erasure, saturation and tap TCP
+  scenarios.
+- **Not done.** Constellations beyond QPSK/16-QAM natively; `v39`/`v615` and
+  block codes; theory for punctured codes; channels other than AWGN in the
+  PER study; native per-symbol logging.
+
+Next: P4 (software performance and real-time headroom) or a PHY-only cabled
+pilot, which needs RF authorization and a grid reservation.

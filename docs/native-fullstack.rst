@@ -15,27 +15,37 @@ Selecting it
 
 ``-M``, ``--cp`` and ``--subcarriers`` keep their meaning and default
 (M=48, CP=6, liquid's default mask). ``--taper`` is ignored (the native PHY
-does not taper). The header MCS and soft-decoding options do not apply: the
-native header section has its own fixed QPSK coding and CRC-32.
+does not taper). The header MCS and ``--soft-header`` do not apply: the
+native header section has its own QPSK modulation and CRC-32, coded by
+``--native-header-fec`` (``v29`` by default, ``v27`` or ``none``).
+``--soft-payload`` selects soft-decision decoding of coded payloads.
 
-The MCS table (``ms``/``amc_table``) must contain only CRC-32, uncoded QPSK
-or 16-QAM entries. Anything else, including the production defaults with
-``rs8`` or ``v29p78`` coding, is rejected at start-up with a ``ValueError``
-naming the entry. There is no silent substitution. Matched FEC is phase P3.
+Since P3 (``docs/native-fec.rst``), MCS entries may use CRC-32, QPSK or
+16-QAM, and any of ``none``, ``rs8``, ``v27``, ``v29`` and their punctured
+rates (``v27p23`` to ``v29p78``) as inner or outer code. Coded payloads are
+bit-identical to liquid's packetizer. Other entries (other constellations,
+other codes, CRC-16) are rejected at start-up with a ``ValueError`` naming
+the entry. There is no silent substitution.
 
-Wire format (native frame v2)
+Wire format (native frame v3)
 -----------------------------
+
+P1 introduced v2 (format byte ``0xD2``, a 14-byte header, uncoded only). P3
+replaced it with v3, described here.
 
 ``src/simulation/NativeFrame.hh`` defines the format:
 
 * Two identical training symbols (Schmidl-Cox detectable, +/-1 on every
   active tone from PRBS-15).
-* Header section, always QPSK, 14 bytes: format byte ``0xD2``, the 5-byte
+* Header section, QPSK, 16 bytes: format byte ``0xD3``, the 5-byte
   DragonRadio ``Header`` (host byte order, as the liquid PHYs send it), MCS
-  index, payload bits per symbol, payload length and CRC-32. One symbol at
-  M=128, two at M=48.
-* Payload section at the announced constellation: the packet body
-  (``ExtendedHeader``, data and control messages) followed by CRC-32.
+  index, payload bits per symbol, inner and outer FEC code, payload length
+  and CRC-32. Uncoded it takes one symbol at M=128 and two at M=48. With the
+  v29 header code (272 bits on air), it takes two and four.
+* Payload section at the announced constellation. Uncoded, it carries the
+  packet body (``ExtendedHeader``, data and control messages) followed by
+  CRC-32, as in v2. Coded, it carries the liquid-compatible packetizer
+  output for (CRC-32, inner, outer).
 * Header and payload bits are scrambled by one per-user PRBS-15 sequence.
 
 The receiver decodes the header, asks ``PHY::wantPacket`` (team, next hop,
@@ -87,6 +97,10 @@ Python 3.12, pybind11 2.13.6 and current Python packages, with liquidDSP,
 xsimd and firpm at their pinned revisions and portable ``-O2``. It is not the
 historical Ubuntu 20.04 / UHD 3.9 / Python 3.8 image, and nothing here was run
 against a USRP. Two sources needed missing standard includes for GCC 13.
+Until P3 the workspace built liquidDSP without libfec, so liquid's
+convolutional and Reed-Solomon codes were unavailable. The setup now
+installs the pinned libcorrect and its libfec shim first, as ``build.sh``
+does.
 
 P2 follow-up: full-stack simulation (``docs/fullstack-simulation.rst``) ran
 ``Radio`` end to end and found that the native demodulator dropped frames
@@ -99,7 +113,7 @@ Not done (proposed)
 -------------------
 
 * Over-the-air or cabled operation; real-time scheduling under load.
-* FEC (P3); backend-neutral MCS metadata (``phy/Modem.hh`` still uses liquid
+* Backend-neutral MCS metadata (``phy/Modem.hh`` still uses liquid
   types); per-symbol logging (``RadioPacket.symbols``) for native frames.
 * OFDMA in the production stack (P5); fragmentation above
   ``--native-max-payload``.

@@ -2,18 +2,25 @@
 // DragonRadio packet header, built on FastPHYCore.hh acquisition, channel
 // estimation and demapping. FFTW and the C++17 runtime only (no liquid, UHD).
 //
-// Wire format "native frame v2" (format byte 0xD2):
+// Wire format "native frame v3" (format byte 0xD3; v2 was 0xD2 with no FEC
+// fields and a 14-byte header):
 //   2 training symbols (identical, Schmidl-Cox detectable)
-//   H header symbols, always QPSK, carrying 14 bytes:
-//       [0]      format byte 0xD2
+//   H header symbols, QPSK, carrying 16 bytes, either uncoded or, when the
+//   link is configured with a header code (both ends, like M and CP),
+//   convolutionally coded (v27/v29 r1/2, NativeFEC.hh) and soft decoded:
+//       [0]      format byte 0xD3
 //       [1..5]   DragonRadio Header (curhop, nexthop, seq, flags), host order
 //       [6]      MCS index (into the transmitter's table)
 //       [7]      payload bits per symbol: 2 (QPSK) or 4 (Gray 16-QAM)
-//       [8..9]   payload length in bytes, big endian
-//       [10..13] CRC-32 of bytes 0..9, big endian
-//   P payload symbols at the announced constellation carrying
-//       payload bytes followed by CRC-32 of the payload, big endian
-// H = ceil(112 / (2 * data tones)); P = ceil((len + 4) * 8 / (bps * data tones)).
+//       [8]      inner FEC code, [9] outer FEC code (NativeFEC.hh Code)
+//       [10..11] payload length in bytes, big endian
+//       [12..15] CRC-32 of bytes 0..11, big endian
+//   P payload symbols at the announced constellation. Uncoded (both codes
+//   none): payload bytes then CRC-32 of the payload, big endian, as in v2.
+//   Coded: the liquid-compatible packetizer output for (CRC-32, inner,
+//   outer), bit-identical to liquid-dsp's packetizer (NativeFEC.hh).
+// H = ceil(header bits on air / (2 * data tones)), with 128 bits uncoded or
+// 8 * (2 * 16 + 2) = 272 bits for v27/v29; P = ceil(on-air bytes * 8 / (bps * data tones)).
 // Header and payload bits are scrambled by one per-user PRBS-15 sequence
 // (header first). Training is +/-1 on every active tone from PRBS-15. Pilots
 // alternate sign with data-symbol index as in the fixed-frame engine.
@@ -24,11 +31,12 @@
 #include <optional>
 
 #include "FastPHYCore.hh"
+#include "NativeFEC.hh"
 
 namespace dragonradio::native {
 
-constexpr unsigned char kFrameFormat = 0xD2;
-constexpr int kHeaderBytes = 14;
+constexpr unsigned char kFrameFormat = 0xD3;
+constexpr int kHeaderBytes = 16;
 constexpr int kHeaderInfoBytes = 5;   // sizeof(Header) in the production stack
 
 // PRBS-15 (x^15 + x^14 + 1), Fibonacci form, one bit per call.
@@ -47,25 +55,48 @@ struct FrameHeader {
     bool valid = false;
     unsigned char info[kHeaderInfoBytes] = {0, 0, 0, 0, 0};
     int mcsidx = 0, bps = 2, length = 0;
+    fec::Code fec0 = fec::kNone, fec1 = fec::kNone;
     int header_symbols = 0, payload_symbols = 0, samples = 0;
+    bool coded() const { return fec0 != fec::kNone || fec1 != fec::kNone; }
 };
 
 struct FramedPHY {
-    int n, cp, nd, max_payload, chase, header_symbols;
+    int n, cp, nd, max_payload, chase, header_symbols, max_on_air;
+    bool soft = true;          // soft-decision decoding of coded payloads
+    fec::PacketizerCache packetizers;
+    fec::Code header_code = fec::kNone;   // header section code (link parameter)
+    int header_air = kHeaderBytes;        // header section bytes on air
+#if defined(DRAGONRADIO_NATIVE_FEC)
+    std::unique_ptr<fec::detail::Stage> header_stage;
+#endif
     std::vector<int> data_bins, pilot_bins;
     std::unique_ptr<FastPHY> core;
     int user_id;
 
     // bins are FFT indices in [0, n); one allocation (full-band OFDM).
     FramedPHY(int n_, int cp_, const std::vector<int> &data, const std::vector<int> &pilots,
-              int max_payload_, int chase_bits = 4, int user = 1)
+              int max_payload_, int chase_bits = 4, int user = 1, int max_on_air_bytes = 0,
+              fec::Code header_code_ = fec::kNone)
       : n(n_), cp(cp_), nd(int(data.size())), max_payload(max_payload_), chase(chase_bits),
-        header_symbols(0), data_bins(data), pilot_bins(pilots), user_id(user) {
+        header_symbols(0), max_on_air(0), header_code(header_code_), data_bins(data), pilot_bins(pilots), user_id(user) {
         if (nd < 8 || pilot_bins.size() < 2) throw std::runtime_error("allocation needs >= 8 data and >= 2 pilot tones");
         if (max_payload < 0 || max_payload > 65535) throw std::runtime_error("invalid maximum payload");
-        header_symbols = (kHeaderBytes * 8 + 2 * nd - 1) / (2 * nd);
+        if (header_code != fec::kNone && header_code != fec::kV27 && header_code != fec::kV29)
+            throw std::runtime_error("header code must be none, v27 or v29");
+        if (header_code != fec::kNone) {
+#if defined(DRAGONRADIO_NATIVE_FEC)
+            header_stage = std::make_unique<fec::detail::Stage>(header_code, kHeaderBytes);
+            header_air = int(header_stage->enc_len_);
+#else
+            throw std::runtime_error("coded header needs native FEC (DRAGONRADIO_NATIVE_FEC)");
+#endif
+        }
+        // Largest payload section on air: uncoded payload + CRC, or the
+        // largest coded packet the caller will send (see max_coded_bytes).
+        max_on_air = std::max(max_payload + 4, max_on_air_bytes);
+        header_symbols = (header_air * 8 + 2 * nd - 1) / (2 * nd);
         // Worst case is QPSK: enough symbols for header plus the largest payload.
-        const int payload_symbols = ((max_payload + 4) * 8 + 2 * nd - 1) / (2 * nd);
+        const int payload_symbols = (max_on_air * 8 + 2 * nd - 1) / (2 * nd);
         const int ns = header_symbols + payload_symbols;
         // Training: +/-1 on active tones in ascending signed-frequency order.
         std::vector<int> active(data);
@@ -85,32 +116,60 @@ struct FramedPHY {
     }
 
     int length_samples() const { return core->length; }
-    int payload_symbols(int length, int bps) const { return ((length + 4) * 8 + bps * nd - 1) / (bps * nd); }
-    int frame_samples(int length, int bps) const {
-        return (2 + header_symbols + payload_symbols(length, bps)) * core->length;
+    // Payload-section bytes on air for a payload of `length` bytes.
+    static int on_air_bytes(int length, fec::Code fec0, fec::Code fec1) {
+        return (fec0 == fec::kNone && fec1 == fec::kNone) ? length + 4 : int(fec::encoded_length(length, fec0, fec1));
+    }
+    // The largest on_air_bytes() over a set of codes, for the constructor.
+    static int max_coded_bytes(int max_payload, const std::vector<std::pair<fec::Code, fec::Code>> &codes) {
+        int m = max_payload + 4;
+        for (auto [a, b] : codes) m = std::max(m, on_air_bytes(max_payload, a, b));
+        return m;
+    }
+    int payload_symbols(int length, int bps, fec::Code fec0 = fec::kNone, fec::Code fec1 = fec::kNone) const {
+        return (on_air_bytes(length, fec0, fec1) * 8 + bps * nd - 1) / (bps * nd);
+    }
+    int frame_samples(int length, int bps, fec::Code fec0 = fec::kNone, fec::Code fec1 = fec::kNone) const {
+        return (2 + header_symbols + payload_symbols(length, bps, fec0, fec1)) * core->length;
     }
     int header_span() const { return (2 + header_symbols) * core->length; }
     int max_frame_samples() const { return core->frame; }
 
     // Build a frame. Returns its sample count.
-    int write(const unsigned char *info, int mcsidx, int bps, const unsigned char *payload, int length, C *out, int capacity) {
+    int write(const unsigned char *info, int mcsidx, int bps, const unsigned char *payload, int length, C *out, int capacity,
+              fec::Code fec0 = fec::kNone, fec::Code fec1 = fec::kNone) {
         if (bps != 2 && bps != 4) throw std::runtime_error("unsupported constellation");
         if (length < 0 || length > max_payload) throw std::runtime_error("payload exceeds configured maximum");
         if (mcsidx < 0 || mcsidx > 255) throw std::runtime_error("MCS index out of range");
-        const int total = frame_samples(length, bps);
+        if (!fec::valid(fec0) || !fec::valid(fec1)) throw std::runtime_error("invalid FEC code");
+        const int air = on_air_bytes(length, fec0, fec1);
+        if (air > max_on_air) throw std::runtime_error("coded payload exceeds the configured maximum on-air size");
+        const int total = frame_samples(length, bps, fec0, fec1);
         if (capacity < total) throw std::runtime_error("short TX output buffer");
         unsigned char header[kHeaderBytes];
         header[0] = kFrameFormat;
         std::memcpy(header + 1, info, kHeaderInfoBytes);
         header[6] = (unsigned char)mcsidx; header[7] = (unsigned char)bps;
-        header[8] = (unsigned char)(length >> 8); header[9] = (unsigned char)length;
-        store_be32(header + 10, crc32(header, 10));
-        std::vector<unsigned char> body(length + 4);
-        if (length) std::memcpy(body.data(), payload, length);
-        store_be32(body.data() + length, crc32(body.data(), length));
+        header[8] = (unsigned char)fec0; header[9] = (unsigned char)fec1;
+        header[10] = (unsigned char)(length >> 8); header[11] = (unsigned char)length;
+        store_be32(header + 12, crc32(header, 12));
+        std::vector<unsigned char> header_bits_on_air(header_air);
+#if defined(DRAGONRADIO_NATIVE_FEC)
+        if (header_stage)
+            header_stage->encode(header, header_bits_on_air.data());
+        else
+#endif
+            std::memcpy(header_bits_on_air.data(), header, kHeaderBytes);
+        std::vector<unsigned char> body(air);
+        if (fec0 == fec::kNone && fec1 == fec::kNone) {
+            if (length) std::memcpy(body.data(), payload, length);
+            store_be32(body.data() + length, crc32(body.data(), length));
+        } else {
+            packetizers.get(length, fec0, fec1).encode(payload, body.data());
+        }
         FastPHY &f = *core;
         const User &a = f.users[0];
-        const int H = header_symbols, P = payload_symbols(length, bps), L = f.length;
+        const int H = header_symbols, P = payload_symbols(length, bps, fec0, fec1), L = f.length;
         const int header_bits = 2 * H * nd;
         auto bit_of = [](const unsigned char *bytes, int count_bits, int i) {
             return i < count_bits ? (bytes[i >> 3] >> (7 - (i & 7))) & 1 : 0;
@@ -124,11 +183,11 @@ struct FramedPHY {
                     int b[4];
                     if (d < H) {
                         const int bit = 2 * (d * nd + j);
-                        for (int k = 0; k < 2; ++k) b[k] = bit_of(header, kHeaderBytes * 8, bit + k) ^ a.prbs[bit + k];
+                        for (int k = 0; k < 2; ++k) b[k] = bit_of(header_bits_on_air.data(), header_air * 8, bit + k) ^ a.prbs[bit + k];
                         f.fd[a.data[j]] = C(b[0] ? -Q : Q, b[1] ? -Q : Q);
                     } else {
                         const int bit = bps * ((d - H) * nd + j);
-                        for (int k = 0; k < bps; ++k) b[k] = bit_of(body.data(), (length + 4) * 8, bit + k) ^ a.prbs[header_bits + bit + k];
+                        for (int k = 0; k < bps; ++k) b[k] = bit_of(body.data(), air * 8, bit + k) ^ a.prbs[header_bits + bit + k];
                         f.fd[a.data[j]] = bps == 2 ? C(b[0] ? -Q : Q, b[1] ? -Q : Q)
                                                    : C((1 - 2 * b[0]) * (1 + 2 * b[1]) * A16, (1 - 2 * b[2]) * (1 + 2 * b[3]) * A16);
                     }
@@ -159,36 +218,57 @@ struct FramedPHY {
         for (int s = 0; s < H; ++s) { phases[s] = f.symbol(a, s, rows.data() + s * nd); FastPHY::unwrap(phases, s); }
         double intercept, slope;
         FastPHY::phase_line(phases, H, intercept, slope);
-        unsigned char header[kHeaderBytes] = {0};
-        std::vector<float> confidence(kHeaderBytes * 8);
+        const int air_bits = header_air * 8;
+        std::vector<unsigned char> on_air(header_air, 0), descrambled(air_bits, 0);
+        std::vector<float> confidence(air_bits);
+        double noise = 0;
+        int points = 0;
         for (int s = 0; s < H; ++s) {
             C correction = std::polar(f.scale, float(-(intercept + slope * s)));
             for (int j = 0; j < nd; ++j) {
                 const int bit = 2 * (s * nd + j);
-                if (bit >= kHeaderBytes * 8) break;
+                if (bit >= air_bits) break;
                 int hard[4];
                 float conf[4];
-                FastPHY::demap(cmul(rows[s * nd + j], correction), cnorm(f.estimate[a.data[j]]), 2, hard, conf);
-                for (int k = 0; k < 2 && bit + k < kHeaderBytes * 8; ++k) {
-                    header[(bit + k) / 8] |= (hard[k] ^ a.prbs[bit + k]) << (7 - (bit + k) % 8);
+                const float gain = cnorm(f.estimate[a.data[j]]);
+                noise += FastPHY::demap(cmul(rows[s * nd + j], correction), gain, 2, hard, conf) * gain;
+                ++points;
+                for (int k = 0; k < 2 && bit + k < air_bits; ++k) {
+                    const int b = hard[k] ^ a.prbs[bit + k];
+                    on_air[(bit + k) / 8] |= b << (7 - (bit + k) % 8);
+                    descrambled[bit + k] = (unsigned char)b;
                     confidence[bit + k] = conf[k];
                 }
             }
         }
+        unsigned char header[kHeaderBytes] = {0};
+#if defined(DRAGONRADIO_NATIVE_FEC)
+        if (header_stage) {
+            std::vector<unsigned char> soft_in(air_bits);
+            soft_bits(descrambled.data(), confidence.data(), air_bits, noise / std::max(points, 1), Q, soft_in.data());
+            header_stage->decode_soft(soft_in.data(), header);
+        } else
+#endif
+            std::memcpy(header, on_air.data(), kHeaderBytes);
         auto valid = [&] {
-            return header[0] == kFrameFormat && crc32(header, 10) == load_be32(header + 10)
-                && (header[7] == 2 || header[7] == 4) && ((header[8] << 8) | header[9]) <= max_payload;
+            const int len = (header[10] << 8) | header[11];
+            return header[0] == kFrameFormat && crc32(header, 12) == load_be32(header + 12)
+                && (header[7] == 2 || header[7] == 4) && fec::valid(header[8]) && fec::valid(header[9])
+                && len <= max_payload
+                && on_air_bytes(len, fec::Code(header[8]), fec::Code(header[9])) <= max_on_air;
         };
         bool ok = valid();
-        if (!ok && chase > 0)
+        if (!ok && chase > 0 && header_code == fec::kNone)
             ok = FastPHY::chase_search(header, kHeaderBytes * 8, confidence.data(), chase, valid, metrics[4]);
         if (!ok) return fh;
         fh.valid = true;
         std::memcpy(fh.info, header + 1, kHeaderInfoBytes);
-        fh.mcsidx = header[6]; fh.bps = header[7]; fh.length = (header[8] << 8) | header[9];
+        fh.mcsidx = header[6]; fh.bps = header[7];
+        fh.fec0 = fec::Code(header[8]); fh.fec1 = fec::Code(header[9]);
+        fh.length = (header[10] << 8) | header[11];
         fh.header_symbols = H;
-        fh.payload_symbols = payload_symbols(fh.length, fh.bps);
-        fh.samples = frame_samples(fh.length, fh.bps);
+        fh.payload_symbols = payload_symbols(fh.length, fh.bps, fh.fec0, fh.fec1);
+        fh.samples = frame_samples(fh.length, fh.bps, fh.fec0, fh.fec1);
         return fh;
     }
 
@@ -210,10 +290,11 @@ struct FramedPHY {
         double intercept, slope;
         FastPHY::phase_line(phases, total, intercept, slope);
         metrics[2] += slope * n / (2 * double(PI) * f.length);
-        const int used = (fh.length + 4) * 8, header_bits = 2 * H * nd;
+        const int used = on_air_bytes(fh.length, fh.fec0, fh.fec1) * 8, header_bits = 2 * H * nd;
         std::vector<unsigned char> body((used + 7) / 8, 0);
         std::vector<float> confidence(used);
-        double error = 0;
+        std::vector<unsigned char> descrambled(fh.coded() ? used : 0);
+        double error = 0, noise = 0;
         int points = 0;
         for (int s = H; s < total; ++s) {
             C correction = std::polar(f.scale, float(-(intercept + slope * s)));
@@ -221,21 +302,51 @@ struct FramedPHY {
                 const int bit = bps * ((s - H) * nd + j);
                 int hard[4];
                 float conf[4];
-                error += FastPHY::demap(cmul(rows[s * nd + j], correction), cnorm(f.estimate[a.data[j]]), bps, hard, conf);
+                const float gain = cnorm(f.estimate[a.data[j]]);
+                const float e = FastPHY::demap(cmul(rows[s * nd + j], correction), gain, bps, hard, conf);
+                error += e;
+                noise += e * gain;     // pre-equalization noise power estimate
                 ++points;
                 for (int k = 0; k < bps && bit + k < used; ++k) {
-                    body[(bit + k) / 8] |= (hard[k] ^ a.prbs[header_bits + bit + k]) << (7 - (bit + k) % 8);
+                    const int b = hard[k] ^ a.prbs[header_bits + bit + k];
+                    body[(bit + k) / 8] |= b << (7 - (bit + k) % 8);
                     confidence[bit + k] = conf[k];
+                    if (fh.coded()) descrambled[bit + k] = (unsigned char)b;
                 }
             }
         }
         metrics[3] = 10 * std::log10(std::max(error / std::max(points, 1), 1e-20));
+        if (fh.coded()) {
+            if (!fec::kAvailable) return false;
+            fec::Packetizer &pk = packetizers.get(fh.length, fh.fec0, fh.fec1);
+            payload.assign(fh.length, 0);
+            if (!soft)
+                return pk.decode(body.data(), payload.data());
+            std::vector<unsigned char> soft_in(used);
+            soft_bits(descrambled.data(), confidence.data(), used, noise / std::max(points, 1), bps == 2 ? Q : A16, soft_in.data());
+            return pk.decode_soft(soft_in.data(), payload.data());
+        }
         auto valid = [&] { return crc32(body.data(), fh.length) == load_be32(body.data() + fh.length); };
         bool ok = valid();
         if (!ok && chase > 0)
             ok = FastPHY::chase_search(body.data(), used, confidence.data(), chase, valid, metrics[4]);
         payload.assign(body.begin(), body.begin() + fh.length);
         return ok;
+    }
+
+    // Soft bits (liquid convention: 0 = bit 0, 255 = bit 1, 127 = erasure)
+    // from approximate LLRs |LLR| = 4 * (d_min / 2) * confidence / N0, where
+    // confidence is the distance to the decision boundary times |H|^2 and N0
+    // the mean pre-equalization error power of the section.
+    static void soft_bits(const unsigned char *decided, const float *confidence, int count, double n0,
+                          double half_dmin, unsigned char *out) {
+        n0 = std::max(n0, 1e-12);
+        for (int i = 0; i < count; ++i) {
+            const double llr = 4 * half_dmin * confidence[i] / n0;
+            const double p = 1 / (1 + std::exp(-std::min(llr, 60.0)));   // P(decided bit correct)
+            const double v = decided[i] ? 255 * p : 255 * (1 - p);
+            out[i] = (unsigned char)std::lround(std::min(255.0, std::max(0.0, v)));
+        }
     }
 
 private:

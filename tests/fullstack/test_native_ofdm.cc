@@ -267,13 +267,44 @@ int main()
     scenario("native-ofdm M=128 CP=16", native128, true, 0, 1.0, 128);
     scenario("liquid ofdm M=48 CP=6 (control)", legacy48, false, 64, 0.3, 48);
 
+    // Coded tables (P3): the production rs8 payload code and convolutional
+    // codes as inner or outer stage, soft and hard decision, through the same
+    // harness (exact sizes, every wanted frame, CFO + noise, buffer protocol).
+    {
+        const liquid::MCS rs8(LIQUID_CRC_32, LIQUID_FEC_RS_M8, LIQUID_FEC_NONE, LIQUID_MODEM_QPSK);
+        const liquid::MCS v29p78(LIQUID_CRC_32, LIQUID_FEC_NONE, LIQUID_FEC_CONV_V29P78, LIQUID_MODEM_QAM16);
+        const liquid::MCS v27rs8(LIQUID_CRC_32, LIQUID_FEC_CONV_V27, LIQUID_FEC_RS_M8, LIQUID_MODEM_QPSK);
+        const liquid::MCS rs8v29(LIQUID_CRC_32, LIQUID_FEC_RS_M8, LIQUID_FEC_CONV_V29, LIQUID_MODEM_QAM16);
+        NativeOFDM coded48({{rs8, AutoGain()}, {v29p78, AutoGain()}}, 48, 6, std::nullopt);
+        NativeOFDM coded128({{v27rs8, AutoGain()}, {rs8v29, AutoGain()}}, 128, 16, std::nullopt, 4096, 4, true);
+        NativeOFDM hard48({{rs8, AutoGain()}, {v29p78, AutoGain()}}, 48, 6, std::nullopt, 4096, 4, false);
+        NativeOFDM header48({{rs8, AutoGain()}, {v29p78, AutoGain()}}, 48, 6, std::nullopt, 4096, 4, true, "v29");
+        NativeOFDM header128({{qpsk, AutoGain()}, {qam16, AutoGain()}}, 128, 16, std::nullopt, 4096, 4, true, "v27");
+        CHECK(header48.getHeaderFEC() == "v29" && header48.getModulatedSize(0, 100) > coded48.getModulatedSize(0, 100),
+              "coded header adds symbols");
+        CHECK(coded48.getFEC()[0] == std::make_pair(std::string("rs8"), std::string("none")) &&
+              coded48.getFEC()[1] == std::make_pair(std::string("none"), std::string("v29p78")), "FEC mapping");
+        CHECK(coded48.getModulatedSize(0, 1500) > native48.getModulatedSize(0, 1500), "coded frame longer than uncoded");
+        scenario("native-ofdm M=48 rs8 / v29p78 (soft)", coded48, true, 0, 0.6, 48);
+        scenario("native-ofdm M=128 v27+rs8 / rs8+v29", coded128, true, 0, 1.0, 128);
+        scenario("native-ofdm M=48 rs8 / v29p78 (hard)", hard48, true, 0, 0.6, 48);
+        scenario("native-ofdm M=48 v29 header, rs8 / v29p78", header48, true, 0, 0.6, 48);
+        scenario("native-ofdm M=128 v27 header, uncoded", header128, true, 0, 1.0, 128);
+    }
+
     // Unsupported MCS entries are rejected, not silently replaced.
-    for (auto fec : {LIQUID_FEC_RS_M8, LIQUID_FEC_CONV_V27}) {
+    for (auto fec : {LIQUID_FEC_HAMMING74, LIQUID_FEC_GOLAY2412, LIQUID_FEC_CONV_V39}) {
         bool threw = false;
         try {
             NativeOFDM bad({{liquid::MCS(LIQUID_CRC_32, LIQUID_FEC_NONE, fec, LIQUID_MODEM_QPSK), AutoGain()}}, 48, 6, std::nullopt);
         } catch (const std::invalid_argument &) { threw = true; }
         CHECK(threw, "unsupported FEC %d accepted", int(fec));
+    }
+    {
+        bool threw = false;
+        try { NativeOFDM bad({{liquid::MCS(LIQUID_CRC_16, LIQUID_FEC_NONE, LIQUID_FEC_NONE, LIQUID_MODEM_QPSK), AutoGain()}}, 48, 6, std::nullopt); }
+        catch (const std::invalid_argument &) { threw = true; }
+        CHECK(threw, "CRC-16 accepted");
     }
     {
         bool threw = false;

@@ -390,14 +390,18 @@ class Radio(dragonradio.tasks.TaskManager):
         elif config.phy == 'native-ofdm':
             if config.taper_len:
                 logger.info('native-ofdm does not taper symbols; ignoring taper_len=%d', config.taper_len)
-            # The native PHY carries its own fixed QPSK/CRC-32 header section;
-            # header_mcs and the soft-decoding flags do not apply to it.
+            # The native PHY carries its own fixed uncoded QPSK/CRC-32 header
+            # section, so header_mcs and soft_header do not apply. Payload FEC
+            # follows the MCS table (liquid-compatible coding, NativeFEC.hh)
+            # and soft_payload selects soft-decision decoding as for liquid.
             phy = NativeOFDM(mcs_table,
                              config.M,
                              config.cp_len,
                              config.subcarriers,
                              config.native_max_payload,
-                             config.native_chase_bits)
+                             config.native_chase_bits,
+                             config.soft_payload,
+                             config.native_header_fec)
         else:
             raise ValueError('Unknown PHY: %s' % config.phy)
 

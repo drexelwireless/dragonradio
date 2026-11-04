@@ -56,7 +56,8 @@ liquid archive must contain the pinned checkout with bootstrap-generated
 
 `setup-fullstack-build.sh SOURCE.tar.gz LIQUID.tar.gz WORKSPACE` unpacks the
 Ubuntu 24.04 development packages the production radio needs into a private
-workspace, builds the pinned liquidDSP, xsimd and firpm, and installs the
+workspace, builds the pinned libcorrect (with its libfec shim, so liquid has
+its convolutional and Reed-Solomon codes), liquidDSP, xsimd and firpm, and installs the
 Python package dependencies into a venv. `build-fullstack.sh WORKSPACE`
 builds the `dragonradio` executable and runs `tests/fullstack`. This is a
 modernized toolchain (UHD 4.6, Python 3.12); see `docs/native-fullstack.rst`.
@@ -75,3 +76,12 @@ scenarios run each node in an unprivileged network namespace (`unshare -rn`)
 with a real tap device and kernel UDP/TCP (`scripts/sim-netapp.py`). This
 needs `/dev/net/tun` and unprivileged user namespaces, and changes nothing
 outside the namespaces.
+
+## Coded PER benchmark (P3, CPU only)
+
+`run-fec-benchmark.sh WORKSPACE OUTDIR [packets] [payload]` builds
+`bench/fec_per.cc` against the workspace objects and measures packet error
+rate over AWGN for native and liquid OFDM, uncoded and with `rs8`, `v27` and
+`v29p78`, through the production PHY classes. `scripts/report-fec.py --run
+OUTDIR --output report.html` adds the theory references. See
+`docs/native-fec.rst`.
