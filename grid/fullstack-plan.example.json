@@ -1,0 +1,34 @@
+{
+  "trial_id": "REPLACE-trial-001",
+  "reservation_id": "REPLACE_WITH_OWN_FINITE_RESERVATION_ID",
+  "rf_approval_reference": "REPLACE_WITH_THIS_EXPERIMENT_APPROVAL",
+  "rf_approval_covers": ["forward data", "reverse data and ACK", "timesync HELLO broadcasts"],
+  "results_root": "/home/USER/dragonradio-results/fullstack",
+  "node_local_root": "/tmp/drfs",
+  "workspace_commit": "REPLACE_WITH_THE_40_CHARACTER_COMMIT_IN_EACH_WORKSPACE_COMMIT_FILE",
+  "phy": "native-ofdm",
+  "radio_args": ["-c", "rs8", "-k", "none", "-m", "qpsk"],
+  "frequency": 915000000,
+  "bandwidth": 1000000,
+  "warmup_s": 20,
+  "duration_s": 60,
+  "drain_s": 5,
+  "go_timeout_s": 60,
+  "timesync": {"time_master": 1, "hello_period": 0.5, "period": 2.0},
+  "nodes": [
+    {"id": 1, "host": "REPLACE_HOST_1", "host_key_alias": "", "workspace": "/tmp/drfs-ws", "family": "N210",
+     "addr": "addr=192.168.10.2", "tx_gain": 10, "rx_gain": 20, "clock_source": "internal", "time_source": "",
+     "usrp_iface": "eth1", "usrp_iface_addr": "192.168.10.1/24"},
+    {"id": 2, "host": "REPLACE_HOST_2", "host_key_alias": "", "workspace": "/tmp/drfs-ws", "family": "X310",
+     "addr": "addr=192.168.40.2", "tx_gain": 10, "rx_gain": 20, "clock_source": "internal", "time_source": "internal",
+     "usrp_iface": "eth2", "usrp_iface_addr": "192.168.40.1/24"}
+  ],
+  "traffic": [
+    {"kind": "udp", "src": 1, "dst": 2, "port": 5001, "pps": 40, "size": 500},
+    {"kind": "udp", "src": 2, "dst": 1, "port": 5002, "pps": 40, "size": 500},
+    {"kind": "tcp-rr", "src": 1, "dst": 2, "port": 6001, "count": 100, "size": 64}
+  ],
+  "strata": {"pair_type": "N210<->X310", "strength": "REPLACE strong|weak", "placement": "REPLACE",
+             "power": "REPLACE measured TX power / attenuation", "clock": "independent internal",
+             "carrier_map": "single channel"}
+}

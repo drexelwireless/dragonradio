@@ -210,8 +210,21 @@ async def experiment(radio, config):
             radio.createTask(timesync_task(), name='timesync')
         radio.createTask(clock_task(), name='clock samples')
 
+        def device_stats():
+            # Simulated device: full counters. UHD device (--hardware): the TX
+            # late/underflow counters reset on read, so a read at traffic
+            # start and end gives the counts during traffic; RX errors are
+            # only logged and are counted from the log by the OTA node script.
+            if hasattr(radio.usrp, 'stats'):
+                return radio.usrp.stats
+            return {'tx_late': radio.usrp.tx_late_count, 'tx_underflow': radio.usrp.tx_underflow_count,
+                    'rx_late': 0, 'rx_overflows': 0, 'rx_queue_drops': 0, 'hardware': True}
+
+        if config.ready_file:
+            with open(config.ready_file, 'w') as f:
+                json.dump({'node': radio.node_id, 'mono': time.monotonic(), 'wall': time.time()}, f)
         await asyncio.sleep(config.warmup)
-        usrp_before = radio.usrp.stats
+        usrp_before = device_stats()
         t_start = time.monotonic()
         if traffic:
             traffic.start()
@@ -221,7 +234,8 @@ async def experiment(radio, config):
             bins = type(traffic).latency_bins if traffic else None
             with open(config.stats_file, 'a') as f:
                 while True:
-                    rec = {'mono': time.monotonic(), 'device': radio.usrp.stats, 'work': work_meters(),
+                    rec = {'mono': time.monotonic(), 'device': radio.usrp.stats if hasattr(radio.usrp, 'stats') else None,
+                           'work': work_meters(),
                            'rx_counts': {str(k): v for k, v in radio.rx_recorder.counts.items()}}
                     if traffic:
                         rec['flows'] = [{'port': fl['port'], 'dest': fl['dest'], 'sent': fl['sent']} for fl in traffic.flows]
@@ -268,8 +282,10 @@ async def experiment(radio, config):
             'flows': traffic.flows if traffic else [],
             'received': received,
             'foreign_frames': traffic.foreign if traffic else None,
-            'device_before': usrp_before,
-            'device': radio.usrp.stats,
+            'device_before': {k: 0 for k in usrp_before} if config.hardware else usrp_before,
+            'device': ({k: v + usrp_before.get(k, 0) if isinstance(v, int) else v for k, v in device_stats().items()}
+                       if config.hardware else device_stats()),
+            'hardware': config.hardware,
             # Every frame the PHY handed up: (timestamp, curhop, nexthop, seq,
             # flags, header_valid, payload_valid, data_len, mcsidx, evm, rssi, cfo)
             'rx_frames': rx_frames,
@@ -322,6 +338,9 @@ def main():
     exp.add_argument('--duration', type=float, default=10.0, help='seconds of traffic')
     exp.add_argument('--drain', type=float, default=3.0, help='seconds after traffic stops')
     exp.add_argument('--results', required=True, help='JSON results path')
+    exp.add_argument('--hardware', action='store_true',
+                     help='run on a real USRP (--addr) instead of --sim-air; used only by scripts/ota-fullstack.py --execute')
+    exp.add_argument('--ready-file', help='write this file once the radio is running (readiness barrier)')
     exp.add_argument('--time-master', type=int, help='node that is the time master (a gateway)')
     exp.add_argument('--hello-period', type=float, help='broadcast a timestamped HELLO every this many seconds')
     exp.add_argument('--timesync-period', type=float,
@@ -338,8 +357,10 @@ def main():
     except SystemExit as err:
         return err.code
 
-    if config.sim_air is None:
-        parser.error('sim-node requires --sim-air')
+    if config.sim_air is None and not config.hardware:
+        parser.error('sim-node requires --sim-air (or --hardware, which opens a real radio)')
+    if config.sim_air is not None and config.hardware:
+        parser.error('--hardware and --sim-air are exclusive')
 
     for key, value in config.config_overrides:
         if not hasattr(config, key):
