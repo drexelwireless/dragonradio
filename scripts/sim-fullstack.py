@@ -18,6 +18,7 @@ payloads and headers, comes from an RxRecorder between channelizer and
 controller.
 """
 import argparse
+import copy
 import json
 import os
 import shlex
@@ -82,6 +83,58 @@ SCENARIOS = {
         flows={1: [(2, 5001, 40, 500)], 2: [(1, 5002, 40, 500)]},
         links={2: [(1, -20.0, 2000.0, 37, 0.0)], 1: [(2, -20.0, -1500.0, 11, 0.0)]},
         expect=dict(min_delivery=0.995, max_app_duplicates=0)),
+    'jitter': dict(
+        doc='Bidirectional; 0-2 ms uniform per-burst timing jitter and 50-sample delay both ways, ARQ on',
+        arq=True,
+        flows={1: [(2, 5001, 40, 500)], 2: [(1, 5002, 40, 500)]},
+        links={2: [(1, 0.0, 0.0, 50, 0.0, 2000)], 1: [(2, 0.0, 0.0, 50, 0.0, 2000)]},
+        expect=dict(min_delivery=0.995, max_app_duplicates=0, min_frame_delivery=0.999)),
+    'taildrop-saturation': dict(
+        doc='Saturation with a 15000-byte tail-drop queue: bounded latency, full goodput',
+        arq=True, radio_args=['--taildrop', '--set', 'tail_drop_max_size=15000'],
+        flows={1: [(2, 5001, 150, 1000)]}, links={},
+        expect=dict(max_app_duplicates=0, min_frame_delivery=0.999, max_p95_latency_ms=800, min_efficiency=0.9),
+        capacity=True),
+    'red-saturation': dict(
+        doc='Saturation with the RED queue at its defaults (7.5-22.5 kB, w_q 0.002); latency reported, not bounded',
+        arq=True, radio_args=['--red'],
+        flows={1: [(2, 5001, 150, 1000)]}, links={},
+        expect=dict(max_app_duplicates=0, min_frame_delivery=0.999, min_efficiency=0.85),
+        capacity=True),
+    'red-tuned': dict(
+        doc='Saturation with RED and w_q 0.05 (average tracks the queue at this rate): bounded latency',
+        arq=True, radio_args=['--red', '--set', 'red_w_q=0.05'],
+        flows={1: [(2, 5001, 150, 1000)]}, links={},
+        expect=dict(max_app_duplicates=0, min_frame_delivery=0.999, max_p95_latency_ms=1500, min_efficiency=0.85),
+        capacity=True),
+    'mandate-expiry': dict(
+        doc='Saturation with the mandate queue and a 300 ms latency mandate: late packets expire',
+        arq=True, radio_args=['--queue', 'mandate'],
+        mandates={1: [(5001, 0.3)], 2: [(5001, 0.3)]},
+        flows={1: [(2, 5001, 150, 1000)]}, links={},
+        expect=dict(max_app_duplicates=0, min_frame_delivery=0.999, max_latency_ms=500, min_efficiency=0.8),
+        capacity=True),
+    'grant-change': dict(
+        doc='Timed TDMA grants: [1,2] then [1,1,2] then [1,2,2], both directions saturated',
+        arq=True, duration=24.0,
+        flows={1: [(2, 5001, 150, 1000)], 2: [(1, 5002, 150, 1000)]},
+        links={},
+        schedules=[(8.0, [1, 1, 2]), (16.0, [1, 2, 2])],
+        # Schedules have no common activation time, so nodes switch tens of
+        # milliseconds apart and a few frames may collide; ARQ recovers them.
+        expect=dict(max_app_duplicates=0, min_frame_delivery=0.99)),
+    'three-node': dict(
+        doc='Three nodes, TDMA 3 slots: unicast ring 1->2->3->1 and a broadcast from 2, ARQ on',
+        arq=True, nodes=3,
+        flows={1: [(2, 5001, 20, 500)], 2: [(3, 5002, 20, 500), (255, 5009, 5, 200)], 3: [(1, 5003, 20, 500)]},
+        links={},
+        expect=dict(min_delivery=0.995, min_broadcast_delivery=0.99, max_app_duplicates=0, min_frame_delivery=0.999)),
+    'three-node-erasure': dict(
+        doc='Three nodes, erasure 15% on 1->2 and 3->1, 30% on 2->3; ARQ recovers unicast',
+        arq=True, nodes=3,
+        flows={1: [(2, 5001, 20, 500)], 2: [(3, 5002, 20, 500), (255, 5009, 5, 200)], 3: [(1, 5003, 20, 500)]},
+        links={2: [(1, 0.0, 0.0, 0, 0.15)], 1: [(3, 0.0, 0.0, 0, 0.15)], 3: [(2, 0.0, 0.0, 0, 0.3)]},
+        expect=dict(min_delivery=0.995, max_app_duplicates=0)),
 }
 
 # Scenarios over real tap interfaces: each node runs in its own network
@@ -115,6 +168,14 @@ TAP_SCENARIOS = {
                   '--udp-send', f'{IP % 2}:5001:10:300', '--udp-recv', '5002'],
               2: ['--tcp-server', '6002', '--tcp-bulk', f'{IP % 1}:6001:150000',
                   '--udp-send', f'{IP % 1}:5002:10:300', '--udp-recv', '5001']},
+        expect=dict(bulk_complete=True, rr_complete=True, min_udp_delivery=0.995,
+                    max_app_duplicates=0, min_frame_delivery=0.999)),
+    'tap-three-node': dict(
+        doc='Three nodes over tap: TCP bulk 1->2, TCP request/response 2->3 and UDP 3->1 at once',
+        arq=True, nodes=3, links={},
+        apps={1: ['--tcp-bulk', f'{IP % 2}:6001:200000', '--udp-recv', '5003'],
+              2: ['--tcp-server', '6001', '--tcp-rr', f'{IP % 3}:6002:60:64'],
+              3: ['--tcp-server', '6002', '--udp-send', f'{IP % 1}:5003:10:300']},
         expect=dict(bulk_complete=True, rr_complete=True, min_udp_delivery=0.995,
                     max_app_duplicates=0, min_frame_delivery=0.999)),
     'tap-tcp-erasure-arq': dict(
@@ -156,9 +217,15 @@ def node_command(args, scenario, node, sock, outdir):
         cmd.append('--arq')
     for (dest, port, pps, size) in sc['flows'].get(node, []):
         cmd += ['--flow', f'{dest}:{port}:{pps}:{size}']
-    for (src, gain, cfo, delay, erasure) in sc['links'].get(node, []):
-        cmd += ['--link', f'{src}:{gain}:{cfo}:{delay}:{erasure}']
-    return cmd + args.extra
+    for link in sc['links'].get(node, []):
+        cmd += ['--link', ':'.join(str(v) for v in link)]
+    for (port, latency) in sc.get('mandates', {}).get(node, []):
+        cmd += ['--mandate', f'{port}:{latency}']
+    # Timed grants: offsets from the estimated traffic start, the same
+    # absolute host monotonic time on every node.
+    for (offset, slots) in sc.get('schedules', []):
+        cmd += ['--schedule-at', f'{args.schedule_base + offset:.6f}:' + ','.join(str(n) for n in slots)]
+    return cmd + sc.get('radio_args', []) + args.extra
 
 
 # Seconds allowed for a tap node's radio to start before applications begin.
@@ -220,13 +287,16 @@ def link_accounting(send, frames, src, dst, snapshot):
     if send is not None:
         rows = send['rows']
         rows = rows[rows['mono_timestamp'] + send['origin'] <= snapshot - IN_FLIGHT]
-        to_dst = rows[(rows['nexthop'] == dst) | (rows['nexthop'] == 255)]
+        logged = rows[(rows['nexthop'] == dst) | (rows['nexthop'] == 255)]
+        # Packets the queue or ARQ dropped are logged too but never reached
+        # the air; count them separately.
+        to_dst = logged[logged['dropped'] == 0]
         data = to_dst[to_dst['data_len'] > 0]
         out['frames_sent'] = int(len(to_dst))
         out['data_attempts'] = int(len(data))
         out['data_first_attempts'] = int(np.sum(data['nretrans'] == 0))
         out['retransmissions'] = int(np.sum(data['nretrans'] > 0))
-        out['queue_or_deadline_drops'] = int(np.sum(to_dst['dropped'] != 0))
+        out['queue_or_deadline_drops'] = int(np.sum(logged['dropped'] != 0))
     from_src = [r for r in frames if r[1] == src and r[0] <= snapshot - IN_FLIGHT]
     out['frames_received'] = len(from_src)
     out['data_received_valid'] = sum(1 for r in from_src if r[6] and r[7] > 0)
@@ -238,98 +308,157 @@ def link_accounting(send, frames, src, dst, snapshot):
     return out
 
 
+def tdma_bound(ns, fs, size, nslots, slots_owned=1, slot=0.035, guard=0.010):
+    """Application bits/s a node can send in slots_owned of nslots TDMA slots.
+
+    SlotSynthesizer::push accepts a frame only if it ends within the slot minus
+    guard (superslots off), so a slot carries whole frames only.
+    """
+    per_slot = int((slot - guard)*fs // ns)
+    return per_slot, per_slot*size*8*slots_owned/(slot*nslots)
+
+
+def window_kbps(arrivals, size, lo, hi):
+    if hi <= lo:
+        return None
+    return 8*size*sum(1 for t in arrivals if lo <= t < hi)/(hi - lo)/1e3
+
+
 def evaluate(scenario, outdir, results, air, nodes):
     sc = SCENARIOS[scenario]
+    exp = sc['expect']
     flows = []
     for src, fl in sc['flows'].items():
         for (dest, port, pps, size) in fl:
             sent = next((f['sent'] for f in results[src]['flows'] if f['port'] == port), 0)
-            rec = results[dest]['received'].get(f'{src}:{port}', {})
-            unique = rec.get('unique', 0)
-            seqs = set(rec.get('seqs', []))
-            # Diagnostic: duplicates of app seq 0 seen with repeated SYNs. Before
-            # the receive-window fix, every retransmitted SYN redelivered the
-            # first packet; any duplicate now fails the run.
-            syns = sum(1 for r in results[dest].get('rx_frames', []) if r[1] == src and r[4] & 1 and r[6])
-            dups = rec.get('dup_seqs', [])
-            syn_redeliveries = min(dups.count(0), max(0, syns - 1))
-            flows.append({
-                'flow': f'{src}->{dest}:{port}', 'offered_pps': pps, 'size': size,
-                'sent': sent, 'delivered': unique,
-                'delivery': unique/sent if sent else None,
-                'missing': len(set(range(sent)) - seqs),
-                'app_duplicates': rec.get('duplicates', 0),
-                'app_duplicate_seqs': dups,
-                'syn_frames_received': syns,
-                'syn_redeliveries': syn_redeliveries,
-                'app_duplicates_other': rec.get('duplicates', 0) - syn_redeliveries,
-                'corrupt': rec.get('corrupt', 0),
-                'out_of_order': rec.get('out_of_order', 0),
-                # Over the arrival window: a saturated flow keeps draining its
-                # queue after the traffic generator stops.
-                'goodput_kbps': (8*rec['bytes']/(rec['last_rx'] - rec['first_rx'])/1e3
-                                 if rec.get('unique', 0) > 1 and rec['last_rx'] > rec['first_rx'] else 0.0),
-                'latency_p50_ms': None if rec.get('latency_p50') is None else 1e3*rec['latency_p50'],
-                'latency_p95_ms': None if rec.get('latency_p95') is None else 1e3*rec['latency_p95'],
-            })
-    sends = {n: read_send_log(outdir / 'logs', n) for n in nodes}
-    links = {}
-    for src in nodes:
-        for dst in nodes:
-            if src != dst:
-                links[f'{src}->{dst}'] = link_accounting(sends[src], results[dst].get('rx_frames', []), src, dst,
-                                                         results[dst]['snapshot_mono'])
-    invalid_headers = {n: sum(1 for r in results[n].get('rx_frames', []) if not r[5]) for n in nodes}
-    device = {n: results[n]['device'] for n in nodes}
-    capacity = None
-    if sc.get('capacity'):
-        capacity = {}
-        for src, fl in sc['flows'].items():
-            send = sends[src]['rows'] if sends[src] is not None else None
-            for (dest, port, pps, size) in fl:
-                data = send[(send['nexthop'] == dest) & (send['data_len'] > 0)] if send is not None else []
-                if not len(data):
-                    continue
-                ns = float(sum(int(x) for x in data['nsamples']))/len(data)
-                fs = results[src]['tx_rate']
-                slot, guard, nslots = 0.035, 0.010, len(nodes)
-                # SlotSynthesizer::push accepts a frame only if it ends within
-                # the slot minus guard (superslots off), so whole frames per slot:
-                per_slot = int((slot - guard)*fs // ns)
-                bound = per_slot*size*8/(slot*nslots)
-                fl_out = next(f for f in flows if f['flow'] == f'{src}->{dest}:{port}')
-                capacity[f'{src}->{dest}'] = {
-                    'samples_per_frame': ns, 'frames_per_slot': per_slot,
-                    'tdma_bound_kbps': bound/1e3, 'goodput_kbps': fl_out['goodput_kbps'],
-                    'efficiency': fl_out['goodput_kbps']*1e3/bound if bound else None}
-    exp = sc['expect']
+            broadcast = dest == 255
+            for dst in ([n for n in nodes if n != src] if broadcast else [dest]):
+                rec = results[dst]['received'].get(f'{src}:{port}', {})
+                unique = rec.get('unique', 0)
+                seqs = set(rec.get('seqs', []))
+                # Diagnostic: duplicates of app seq 0 seen with repeated SYNs
+                # (redelivered before the receive-window fix).
+                syns = sum(1 for r in results[dst].get('rx_frames', []) if r[1] == src and r[4] & 1 and r[6])
+                dups = rec.get('dup_seqs', [])
+                flows.append({
+                    'flow': f'{src}->{dst}:{port}' + (' bcast' if broadcast else ''),
+                    'src': src, 'dst': dst, 'port': port, 'broadcast': broadcast,
+                    'offered_pps': pps, 'size': size,
+                    'sent': sent, 'delivered': unique,
+                    'delivery': unique/sent if sent else None,
+                    'missing': len(set(range(sent)) - seqs),
+                    'app_duplicates': rec.get('duplicates', 0),
+                    'app_duplicate_seqs': dups,
+                    'syn_frames_received': syns,
+                    'syn_redeliveries': min(dups.count(0), max(0, syns - 1)),
+                    'corrupt': rec.get('corrupt', 0),
+                    'out_of_order': rec.get('out_of_order', 0),
+                    # Over the arrival window: a saturated flow keeps draining
+                    # its queue after the traffic generator stops.
+                    'goodput_kbps': (8*rec['bytes']/(rec['last_rx'] - rec['first_rx'])/1e3
+                                     if unique > 1 and rec['last_rx'] > rec['first_rx'] else 0.0),
+                    'latency_p50_ms': None if rec.get('latency_p50') is None else 1e3*rec['latency_p50'],
+                    'latency_p95_ms': None if rec.get('latency_p95') is None else 1e3*rec['latency_p95'],
+                    'latency_max_ms': None if rec.get('latency_max') is None else 1e3*rec['latency_max'],
+                    '_arrivals': rec.get('arrivals', []),
+                })
     checks = []
+    sends = {n: read_send_log(outdir / 'logs', n) for n in nodes}
     for f in flows:
-        if 'min_delivery' in exp:
-            checks.append((f'{f["flow"]} delivery >= {exp["min_delivery"]}', f['delivery'] is not None and f['delivery'] >= exp['min_delivery']))
-        if 'max_delivery' in exp:
+        key = 'min_broadcast_delivery' if f['broadcast'] else 'min_delivery'
+        if key in exp:
+            checks.append((f'{f["flow"]} delivery >= {exp[key]}', f['delivery'] is not None and f['delivery'] >= exp[key]))
+        if 'max_delivery' in exp and not f['broadcast']:
             checks.append((f'{f["flow"]} delivery <= {exp["max_delivery"]}', f['delivery'] is not None and f['delivery'] <= exp['max_delivery']))
         if 'max_app_duplicates' in exp:
             checks.append((f'{f["flow"]} application duplicates == 0', f['app_duplicates'] <= exp['max_app_duplicates']))
         checks.append((f'{f["flow"]} no corrupt payloads', f['corrupt'] == 0))
+        if 'max_latency_ms' in exp:
+            checks.append((f'{f["flow"]} max latency {f["latency_max_ms"]} ms <= {exp["max_latency_ms"]} ms',
+                           f['latency_max_ms'] is not None and f['latency_max_ms'] <= exp['max_latency_ms']))
+        if 'max_p95_latency_ms' in exp:
+            checks.append((f'{f["flow"]} p95 latency {f["latency_p95_ms"]} ms <= {exp["max_p95_latency_ms"]} ms',
+                           f['latency_p95_ms'] is not None and f['latency_p95_ms'] <= exp['max_p95_latency_ms']))
     if 'min_retransmissions' in exp:
-        retx = sum(l.get('retransmissions', 0) for l in links.values())
-        avail = all(s is not None for s in sends.values())
-        checks.append((f'retransmissions >= {exp["min_retransmissions"]} (logged {retx})', avail and retx >= exp['min_retransmissions']))
-    if 'min_frame_delivery' in exp:
-        for name, l in links.items():
-            if l.get('frames_sent'):
-                checks.append((f'{name} PHY frame delivery >= {exp["min_frame_delivery"]}', l.get('frame_delivery', 0) >= exp['min_frame_delivery']))
-    for n in nodes:
-        d = device[n]
-        checks.append((f'node {n}: no late TX bursts', d['tx_late'] == 0))
-        checks.append((f'node {n}: no late or dropped RX bursts', d['rx_late'] == 0 and d['rx_queue_drops'] == 0 and d['rx_overflows'] == 0))
+        retx = 0
+        for src in nodes:
+            send = sends[src]
+            if send is not None:
+                rows = send['rows']
+                retx += int(((rows['data_len'] > 0) & (rows['nretrans'] > 0)).sum())
+        checks.append((f'retransmissions >= {exp["min_retransmissions"]} (logged {retx})',
+                       all(s is not None for s in sends.values()) and retx >= exp['min_retransmissions']))
+    links, device, invalid_headers = common_checks(nodes, results, sends, exp, checks)
+
+    capacity = None
+    if sc.get('capacity'):
+        capacity = {}
+        for f in flows:
+            send = sends[f['src']]['rows'] if sends[f['src']] is not None else None
+            data = (send[(send['nexthop'] == f['dst']) & (send['data_len'] > 0) & (send['dropped'] == 0)]
+                    if send is not None else [])
+            if not len(data):
+                continue
+            ns = float(sum(int(x) for x in data['nsamples']))/len(data)
+            per_slot, bound = tdma_bound(ns, results[f['src']]['tx_rate'], f['size'], len(nodes))
+            capacity[f'{f["src"]}->{f["dst"]}'] = {
+                'samples_per_frame': ns, 'frames_per_slot': per_slot,
+                'tdma_bound_kbps': bound/1e3, 'goodput_kbps': f['goodput_kbps'],
+                'efficiency': f['goodput_kbps']*1e3/bound if bound else None}
+            if 'min_efficiency' in exp:
+                checks.append((f'{f["flow"]} goodput >= {exp["min_efficiency"]} of the TDMA bound',
+                               bound > 0 and f['goodput_kbps']*1e3/bound >= exp['min_efficiency']))
+
+    # Timed grants: goodput of each saturated flow between schedule changes,
+    # compared with each node's share of the slots.
+    grants = None
+    if sc.get('schedules'):
+        applied = []
+        for i in range(len(sc['schedules'])):
+            times = [r['schedules'][i]['applied'] for r in results.values() if len(r.get('schedules', [])) > i]
+            checks.append((f'schedule {i} applied on every node', len(times) == len(nodes)))
+            applied.append(max(times) if times else None)
+            if len(times) == len(nodes):
+                checks.append((f'schedule {i} applied on all nodes within 200 ms (skew {1e3*(max(times) - min(times)):.1f} ms)',
+                               max(times) - min(times) < 0.2))
+        settle = 1.5
+        first = max(min(f['_arrivals']) for f in flows if f['_arrivals']) if all(f['_arrivals'] for f in flows) else None
+        last = min(max(f['_arrivals']) for f in flows if f['_arrivals']) if all(f['_arrivals'] for f in flows) else None
+        edges = [first] + applied + [last]
+        phases = []
+        initial = sc.get('initial_slots', list(nodes))
+        slot_sets = [initial] + [slots for (_off, slots) in sc['schedules']]
+        for i, slots in enumerate(slot_sets):
+            lo = None if edges[i] is None else edges[i] + (settle if i else 1.0)
+            hi = edges[i + 1]
+            phase = {'slots': slots, 'window': [lo, hi], 'flows': {}}
+            for f in flows:
+                k = window_kbps(f['_arrivals'], f['size'], lo, hi) if lo is not None and hi is not None else None
+                share = slots.count(f['src'])/len(slots)
+                phase['flows'][f['flow']] = {'goodput_kbps': k, 'slot_share': share}
+            vals = [(v['goodput_kbps'], v['slot_share']) for v in phase['flows'].values()]
+            if len(vals) == 2 and all(v[0] for v in vals):
+                measured = vals[0][0]/vals[1][0]
+                expected = vals[0][1]/vals[1][1]
+                phase['ratio'] = measured
+                phase['expected_ratio'] = expected
+                checks.append((f'phase {i} {slots}: goodput ratio {measured:.2f} within 25% of slot ratio {expected:.2f}',
+                               abs(measured/expected - 1) <= 0.25))
+            else:
+                checks.append((f'phase {i} {slots}: both flows measured', False))
+            phases.append(phase)
+        delays = {str(n): [round(e['applied'] - e['requested'], 4) for e in results[n].get('schedules', [])] for n in nodes}
+        grants = {'applied': applied, 'apply_delay_s': delays, 'phases': phases}
+
+    for f in flows:
+        del f['_arrivals']
     return {
-        'scenario': scenario, 'doc': sc['doc'], 'arq': sc['arq'],
+        'scenario': scenario, 'doc': sc['doc'], 'arq': sc['arq'], 'nodes': len(nodes),
+        'radio_args': sc.get('radio_args', []),
         'links': {str(k): v for k, v in sc['links'].items()},
         'flows': flows, 'device': {str(k): v for k, v in device.items()},
         'links_accounting': links, 'invalid_headers': {str(k): v for k, v in invalid_headers.items()}, 'air': air,
-        'capacity': capacity,
+        'capacity': capacity, 'grants': grants,
         'checks': [{'check': c, 'passed': bool(ok)} for c, ok in checks],
         'passed': all(ok for _, ok in checks),
     }
@@ -408,7 +537,7 @@ def evaluate_tap(scenario, outdir, results, apps, air, nodes):
             send = sends[b['src']]['rows'] if sends[b['src']] is not None else None
             if send is None or 'goodput_kbps' not in b:
                 continue
-            data = send[(send['nexthop'] == b['dst']) & (send['data_len'] > 0)]
+            data = send[(send['nexthop'] == b['dst']) & (send['data_len'] > 0) & (send['dropped'] == 0)]
             big = data[data['data_len'] >= 1400]
             if not len(big):
                 continue
@@ -432,6 +561,13 @@ def evaluate_tap(scenario, outdir, results, apps, air, nodes):
 
 
 def run(args, scenario):
+    sc = SCENARIOS[scenario]
+    args = copy.copy(args)
+    args.nodes = sc.get('nodes', args.nodes)
+    args.duration = sc.get('duration', args.duration)
+    # Nodes start traffic about this long after launch (radio start-up plus
+    # warm-up); timed schedule changes are offsets from it.
+    args.schedule_base = time.monotonic() + TAP_STARTUP + args.warmup
     outdir = Path(args.outdir) / scenario
     if outdir.exists():
         shutil.rmtree(outdir)
@@ -537,6 +673,11 @@ def main():
             print(f'   TCP rr {r["src"]}->{r["dst"]}:{r["port"]}  {r.get("completed")}/{r["count"]} exchanges  '
                   f'RTT p50 {"-" if p50 is None else round(1e3*p50, 1)} ms  p95 {"-" if p95 is None else round(1e3*p95, 1)} ms'
                   + (f'  error {r["error"]}' if 'error' in r else ''), flush=True)
+        for i, ph in enumerate((s.get('grants') or {}).get('phases', [])):
+            rates = ', '.join(f'{k} {"-" if v["goodput_kbps"] is None else round(v["goodput_kbps"], 1)} kb/s (share {v["slot_share"]:.2f})'
+                              for k, v in ph['flows'].items())
+            print(f'   grant phase {i} slots {ph["slots"]}: {rates}; ratio {ph.get("ratio", float("nan")):.2f} '
+                  f'(expected {ph.get("expected_ratio", float("nan")):.2f})', flush=True)
         for name, c in (s.get('capacity') or {}).items():
             print(f'   capacity {name}: {c["frames_per_slot"]} frames/slot of {c["samples_per_frame"]:.0f} samples; '
                   f'TDMA bound {c["tdma_bound_kbps"]:.1f} kb/s; goodput {c["goodput_kbps"]:.1f} kb/s ({100*c["efficiency"]:.1f}%)', flush=True)

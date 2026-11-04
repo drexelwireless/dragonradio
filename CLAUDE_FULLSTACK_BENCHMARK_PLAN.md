@@ -617,7 +617,25 @@ network namespace (`unshare -rn`) with the production `TunTap`, and
 
 No host network change was made.
 
+Jitter, queues, deadlines, grants and three nodes, 2026-11-04: nine more
+scenarios pass:
+
+- Per-burst timing jitter.
+- Tail-drop, RED (default and tuned) and mandate-deadline queues at
+  saturation.
+- Timed TDMA grants: goodput ratios within 0.02 of the slot shares.
+- Three nodes with unicast, broadcast and erasure, over synthetic traffic and
+  over tap.
+
+The gentle-RED drop probability was fixed. This is a production change, with
+a test. Reported and not changed:
+
+- Schedules have no common activation time, so a slot-count change collides
+  0–3 frames.
+- `getMGENHdr` reads any UDP payload as MGEN.
+- Default RED (w_q 0.002) oscillates at this link rate.
+
 Runs are wall-clock paced; deterministic virtual time is not implemented. Still
-open in P2: jitter, timed grants, queue limits and expiry; more than two
-nodes; device gain modeling. Next: those P2 items, or P3 (matched
+open in P2: deterministic virtual time, device gain modeling, the
+collaboration controller, and larger or multi-hop networks. Next: those P2 items, or P3 (matched
 FEC), so the production coded MCS tables can run on the native PHY.

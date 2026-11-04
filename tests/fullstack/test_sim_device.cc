@@ -272,7 +272,47 @@ int main()
         CHECK(approx(*first.front()->timestamp, t0 + 500 / fs), "IQBuf timestamp set");
     }
 
-    // 8. Synthetic traffic: frames are valid Ethernet/IPv4/UDP, delivery is
+    // 8. Per-burst jitter delays each burst by a whole number of samples in
+    //    [0, jitter], drawn independently per burst.
+    {
+        sim::Link l;
+        l.jitter = 50;
+        b.setLink(1, l);
+        std::vector<long> offsets;
+        for (int trial = 0; trial < 6; ++trial) {
+            auto y = exchange(a, b, 1000, 6000, burst(3000));
+            long first = -1;
+            for (size_t i = 0; i < y.size() && first < 0; ++i)
+                if (std::abs(y[i]) > 1e-3)
+                    first = static_cast<long>(i);
+            offsets.push_back(first - 1000);
+            double err = 0;
+            for (size_t k = 0; first >= 0 && k < 3000; ++k)
+                err = std::max(err, (double) std::abs(y[first + k] - x[k]));
+            CHECK(first >= 1000 && first <= 1050 && err < 1e-5, "jittered burst at %ld (err %g)", first, err);
+        }
+        bool varied = false;
+        for (long o : offsets)
+            varied |= o != offsets[0];
+        CHECK(varied, "jitter did not vary between bursts");
+
+        // Two buffers of one TX burst move together: the second still
+        // follows the first with no gap or overlap.
+        std::list<std::shared_ptr<IQBuf>> two = burst(3000);
+        two.splice(two.end(), burst(3000));
+        auto y = exchange(a, b, 1000, 8000, two);
+        long first = -1;
+        for (size_t i = 0; i < y.size() && first < 0; ++i)
+            if (std::abs(y[i]) > 1e-3)
+                first = static_cast<long>(i);
+        double err = 0;
+        for (size_t k = 0; first >= 0 && k < 3000; ++k)
+            err = std::max(err, (double) std::abs(y[first + k] - x[k]) + std::abs(y[first + 3000 + k] - x[k]));
+        CHECK(first >= 1000 && first <= 1050 && err < 1e-5, "burst buffers jittered apart (first %ld, err %g)", first, err);
+        b.setLink(1, sim::Link());
+    }
+
+    // 9. Synthetic traffic: frames are valid Ethernet/IPv4/UDP, delivery is
     //    hashed, deduplicated and corruption is detected.
     {
         sim::SimTraffic t1(1, "10.10.10.%d", "c6:ff:ff:ff:ff:%02x", 1500);
@@ -287,6 +327,10 @@ int main()
         while (sum >> 16)
             sum = (sum & 0xffff) + (sum >> 16);
         CHECK(sum == 0xffff, "IPv4 checksum");
+        const uint8_t *m = f.data() + 42;   // UDP payload: MGEN header first
+        CHECK(((m[0] << 8) | m[1]) == 600 && m[2] == 2 &&
+              ((m[4] << 24) | (m[5] << 16) | (m[6] << 8) | m[7]) == 5001 &&
+              ((m[8] << 24) | (m[9] << 16) | (m[10] << 8) | m[11]) == 42, "MGEN header (size, version, flow, seq)");
         auto deliver = [&](const std::vector<uint8_t> &frame) {
             std::vector<unsigned char> d(sizeof(ExtendedHeader) + frame.size());
             std::memcpy(d.data() + sizeof(ExtendedHeader), frame.data(), frame.size());

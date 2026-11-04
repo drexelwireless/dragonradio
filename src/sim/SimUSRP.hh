@@ -32,13 +32,14 @@ struct __attribute__((packed)) AirHeader {
     double   fs;        ///< Sample rate (Hz)
     double   fc;        ///< Center frequency (Hz)
     uint32_t nsamples;  ///< Number of complex float32 samples that follow
-    uint32_t burst;     ///< Per-node burst counter
+    uint32_t burst;     ///< Per-node message counter
+    uint32_t group;     ///< Per-node TX burst (start_of_burst to end_of_burst)
 };
 
-static_assert(sizeof(AirHeader) == 40, "AirHeader must be 40 bytes");
+static_assert(sizeof(AirHeader) == 44, "AirHeader must be 44 bytes");
 
 constexpr uint32_t kAirMagic = 0x41535244; // "DRSA"
-constexpr uint16_t kAirVersion = 1;
+constexpr uint16_t kAirVersion = 2;
 constexpr uint8_t  kAirHello = 1;
 constexpr uint8_t  kAirBurst = 2;
 
@@ -53,8 +54,17 @@ struct Link {
     /** @brief Propagation delay (samples) */
     int64_t delay = 0;
 
-    /** @brief Probability that an entire burst is erased */
+    /** @brief Probability that a transmitted IQ buffer is erased. The
+     * time- and frequency-domain synthesizers hand burstTX one buffer per
+     * frame; the multichannel synthesizer one per slot.
+     */
     double erasure = 0.0;
+
+    /** @brief Extra delay of each TX burst (start_of_burst through
+     * end_of_burst), uniform in [0, jitter] samples. Every buffer of a burst
+     * is shifted by the same amount.
+     */
+    int64_t jitter = 0;
 };
 
 /** @brief Counters reported by SimUSRP. */
@@ -286,6 +296,7 @@ protected:
     int64_t tx_pos_;
     bool tx_burst_late_;
     uint32_t tx_burst_count_;
+    uint32_t tx_group_;
 
     std::mutex rx_mutex_;
     std::vector<Burst> bursts_;
@@ -294,6 +305,7 @@ protected:
     int64_t rendered_upto_;
     bool streaming_;
     std::map<uint8_t, Link> links_;
+    std::map<uint8_t, std::pair<uint32_t, int64_t>> jitter_;  ///< Last TX group and its jitter, per source
     double noise_db_;
     float noise_std_;
 

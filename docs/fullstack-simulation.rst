@@ -41,7 +41,12 @@ node and records, per burst, how far ahead of its air time it arrived. Each
 receiver renders its own sample stream. The stream is complex Gaussian noise
 (``--sim-noise-db``, per sample) plus every other node's bursts after a
 directed link model: gain, carrier offset as a continuous rotation in
-absolute time, integer delay, and burst erasure probability. The difference
+absolute time, integer delay, per-burst timing jitter, and an erasure
+probability. Jitter shifts each whole TX burst, from start of burst to end of
+burst, by a uniform random number of samples. Erasure removes one IQ buffer
+handed to ``burstTX``, which is one frame with the time- and
+frequency-domain synthesizers and one slot with the multichannel
+synthesizer; "burst erasure" in the tables means this. The difference
 between the transmitter's and receiver's tuning is applied as a frequency
 shift. Forward and reverse links are independent. Device gains are not
 modeled; link gain sets the SNR.
@@ -210,6 +215,77 @@ configuration. The liquid control needs an uncoded header (``--set``, a
 ``sim-node.py`` option) because the workspace's liquidDSP has no libfec for
 the default ``v29p78`` header code.
 
+Jitter, queues, deadlines, timed grants and three nodes
+-------------------------------------------------------
+
+These scenarios use the same radio settings, with one run each unless
+noted. Every synthetic payload starts with a standard MGEN header (flow ID
+equal to the destination port, sequence number and send time), as on the
+Colosseum. The radio's flow tracking, mandates and deadlines key on that
+header.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Scenario
+     - Setup
+     - Result
+   * - jitter
+     - Both ways 40 × 500 B/s; each TX burst delayed 0–2 ms (uniform) plus 50
+       samples
+     - 801/801 each way; all 898 and 894 frames received; latency median
+       77 ms, 95th percentile 112 ms
+   * - taildrop-saturation
+     - 1.2 Mb/s offered into ``--taildrop`` with a 15000-byte limit
+     - Goodput 340 kb/s (99.2% of bound); latency median 511 ms, 95th
+       percentile 538 ms, max 606 ms; 2133 packets dropped at the queue
+   * - red-saturation
+     - Same, ``--red`` with production defaults (7.5–22.5 kB, w_q 0.002)
+     - Goodput 340 kb/s; latency median 2.0 s, 95th percentile 3.6 s, as a
+       roughly 5 s sawtooth from 0.8 to 3.7 s (below)
+   * - red-tuned
+     - Same, w_q 0.05
+     - Goodput 340 kb/s; latency median 1.04 s, 95th percentile 1.12 s, max
+       1.20 s
+   * - mandate-expiry
+     - Same offered load, ``--queue mandate``, 300 ms latency mandate
+     - Goodput 341.5 kb/s (99.6%); latency median 423 ms, max 488 ms; 2139
+       packets expired at the queue
+   * - grant-change
+     - Both ways saturated; schedule [1,2] → [1,1,2] at +8 s → [1,2,2] at +16 s
+     - Goodput ratio node 1 to node 2 of 1.01, 2.01 and 0.50 against slot
+       ratios 1, 2 and 0.5 (three runs agree within 0.02); 0–3 frames lost at
+       the slot-count change (below)
+   * - three-node
+     - TDMA 3 slots; ring 1→2→3→1 at 20 × 500 B/s; broadcast from 2 at 5/s
+     - All unicast 401/401; broadcast 101/101 at both receivers; every frame
+       on all six directed links received
+   * - three-node-erasure
+     - Erasure 15% on 1→2 and 3→1, 30% on 2→3
+     - Unicast 401/401 on every flow after 99, 80 and 180 retransmissions;
+       unprotected broadcast 67/101 at node 3 and 101/101 at node 1
+   * - tap-three-node
+     - Tap and kernel stacks: TCP bulk 1→2, TCP echoes 2→3, UDP 3→1 at once
+     - 200 kB complete (SHA-256 match, 214 kb/s); 60/60 echoes, RTT median
+       115 ms; UDP 200/200
+
+* **Saturation without a limit.** For comparison, the unbounded FIFO
+  scenario (``saturation``) reached a 95th-percentile latency of 16 s at the
+  same goodput.
+* **Default RED oscillates.** With w_q 0.002, the average queue tracks the
+  instantaneous queue with a time constant of about 500 arrivals, roughly
+  3.3 s at 150 packets/s. The real queue grows to about 150 kB before the
+  average reaches twice the maximum threshold. Every arrival is then dropped
+  until the queue drains, and the cycle repeats. The default suits fast
+  links. At this rate, w_q 0.05 keeps the latency bounded.
+* **Timed grants.** The slot shares follow the schedule immediately. Changing
+  the number of slots makes ``Radio.installMACSchedule`` build a new TDMA MAC,
+  which took 25–59 ms per node; the nodes' switch times differed by 20–26 ms.
+  For that interval the nodes used different slot layouts, and 0–3 frames
+  collided, which ARQ recovered. A change that keeps the slot count applied
+  in 2–11 ms. The check allows up to 1% frame loss in this scenario and
+  records the switching delays.
+
 Real tap interfaces and kernel TCP/UDP
 --------------------------------------
 
@@ -278,7 +354,7 @@ application time, with the same radio settings as above.
 Defects found and fixed
 -----------------------
 
-All three were found by these runs. Each has a regression test that fails
+All four were found by these runs. Each has a regression test that fails
 before the fix and passes after it.
 
 1. **Native PHY dropped frames that started at a receive-buffer boundary**
@@ -341,8 +417,33 @@ before the fix and passes after it.
    application duplicates. Every scenario now fails on any application
    duplicate.
 
-Known issue (not changed)
--------------------------
+4. **Gentle RED used the wrong drop probability** (production queue bug).
+   Between ``max_thresh`` and ``2*max_thresh``, gentle RED raises the drop
+   probability linearly from ``max_p`` to 1. ``REDQueue`` used
+   ``max_p*(avg - max_thresh)/max_thresh``. That fell to 0 just above
+   ``max_thresh`` and reached only ``max_p``, so the queue grew unchecked
+   until the forced-drop region. It now uses
+   ``max_p + (1 - max_p)*(avg - max_thresh)/max_thresh``. Test: the RED part
+   of ``tests/fullstack/test_net_queue.cc`` holds the queue at 1.1, 1.5 and
+   1.9 times ``max_thresh``. Before the fix the drop probabilities were
+   0.010, 0.050 and 0.091; after it, 0.189, 0.550 and 0.913, against 0.19,
+   0.55 and 0.91 specified. This affects hardware runs that use ``--red``.
+
+Known issues (not changed)
+--------------------------
+
+**Schedules have no activation time.** A new MAC schedule takes effect when
+each node installs it. A change of slot count takes tens of milliseconds and
+varies between nodes, so neighbors briefly disagree and frames can collide
+(see timed grants above). A shared activation time at a frame boundary,
+installed in advance, would avoid this.
+
+**Non-MGEN UDP gets a garbage flow ID.** ``Packet::getMGENHdr`` checks only
+the payload length, not the MGEN version. Any UDP datagram of 20 bytes or
+more is therefore read as MGEN: its flow ID, sequence number and timestamp
+come from payload bytes. Mandates, deadlines and flow statistics for
+non-MGEN traffic are unreliable. The synthetic traffic emits real MGEN
+headers. The tap scenarios' kernel UDP and TCP use no mandates.
 
 **Spurious tail retransmissions.** In the clean runs, the last few packets
 before traffic stops are sometimes retransmitted once. Their ACK has no
@@ -356,10 +457,13 @@ Not done (proposed)
 
 * Deterministic virtual-time runs. The MAC, controller and timer queue sleep on
   real time, so this needs a clock and sleep abstraction across them.
-* Tap scenarios with more than two nodes, longer and repeated runs, and
-  standard tools such as iperf3, which is not installed in the container.
-* Jitter, timed grants, queue limits and packet expiry, more than two nodes,
-  and the collaboration controller.
+* Longer and repeated runs, networks larger than three nodes, multi-hop
+  routing, and standard tools such as iperf3, which is not installed in the
+  container.
+* The collaboration controller and the protobuf/collaboration network;
+  schedules here are installed by the experiment script.
+* Host-side delivery jitter (bursts arriving at a receiver late). The jitter
+  modeled here shifts transmissions in time.
 * Device gain and AGC modeling, sample-rate conversion between nodes, and
   fractional delay.
 * Coded MCS (P3) and OFDMA in the production stack (P5).

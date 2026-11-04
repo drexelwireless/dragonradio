@@ -16,9 +16,12 @@ import json
 import logging
 import time
 
+import numpy as np
+
 import dragonradio
 import dragonradio.radio
 from _dragonradio.radio import RxRecorder  # pylint: disable=no-name-in-module
+from _dragonradio.radio import Mandate, MandateMap, MandateQueue  # pylint: disable=no-name-in-module
 
 logger = logging.getLogger('sim-node')
 
@@ -33,14 +36,31 @@ def parse_flow(s):
 
 
 def parse_link(s):
-    """SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE]]], the link from SRC to this node"""
+    """SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE[:JITTER]]]], the link from SRC to this node"""
     parts = s.split(':')
-    if not 2 <= len(parts) <= 5:
-        raise ValueError(f'bad link {s!r}; expected SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE]]]')
-    vals = [int(parts[0]), float(parts[1]), 0.0, 0, 0.0]
+    if not 2 <= len(parts) <= 6:
+        raise ValueError(f'bad link {s!r}; expected SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE[:JITTER]]]]')
+    vals = [int(parts[0]), float(parts[1]), 0.0, 0, 0.0, 0]
     for i, p in enumerate(parts[2:], start=2):
-        vals[i] = int(p) if i == 3 else float(p)
+        vals[i] = int(p) if i in (3, 5) else float(p)
     return tuple(vals)
+
+
+def parse_mandate(s):
+    """PORT:MAX_LATENCY_S, a latency mandate for the flow to UDP/TCP port PORT"""
+    port, sep, latency = s.partition(':')
+    if not sep:
+        raise ValueError(f'bad mandate {s!r}; expected PORT:MAX_LATENCY_S')
+    return int(port), float(latency)
+
+
+def parse_schedule(s):
+    """MONO:N,N,... install a one-channel TDMA schedule (node per slot) at host
+    CLOCK_MONOTONIC time MONO"""
+    when, sep, slots = s.partition(':')
+    if not sep:
+        raise ValueError(f'bad schedule {s!r}; expected MONO:NODE,NODE,...')
+    return float(when), [int(n) for n in slots.split(',')]
 
 
 def parse_set(s):
@@ -70,8 +90,29 @@ async def experiment(radio, config):
         # real tap interface carries whatever the node's applications send
         # (scripts/sim-netapp.py in the node's network namespace).
         traffic = radio.tuntap if config.sim_traffic else None
-        for (src, gain_db, cfo_hz, delay, erasure) in config.links:
-            radio.usrp.setLink(src, gain_db, cfo_hz, delay, erasure)
+        for (src, gain_db, cfo_hz, delay, erasure, jitter) in config.links:
+            radio.usrp.setLink(src, gain_db, cfo_hz, delay, erasure, jitter)
+
+        # Latency mandates, installed as the collaboration controller does:
+        # flow performance tracking always, the mandate queue if selected
+        # (it sets each packet's deadline from max_latency_s).
+        if config.mandates:
+            mandates = MandateMap()
+            for (port, latency) in config.mandates:
+                mandates[port] = Mandate(port, 1.0, 1, latency, None, None)
+            radio.flowperf.mandates = mandates
+            if isinstance(radio.netq, MandateQueue):
+                radio.netq.mandates = mandates
+
+        # Timed MAC schedule changes (grants) through Radio.installMACSchedule.
+        schedule_log = []
+
+        async def apply_schedule(when, slots):
+            await asyncio.sleep(max(0.0, when - time.monotonic()))
+            radio.installMACSchedule(np.array([slots]))
+            schedule_log.append({'requested': when, 'applied': time.monotonic(), 'slots': slots})
+        for (when, slots) in config.schedules:
+            radio.createTask(apply_schedule(when, slots), name=f'schedule at {when}')
         if config.flows and traffic is None:
             raise ValueError('--flow requires --sim-traffic')
         for (dest, port, rate, size, count) in config.flows:
@@ -100,7 +141,7 @@ async def experiment(radio, config):
                 'unique': st['unique'], 'duplicates': st['duplicates'],
                 'corrupt': st['corrupt'], 'out_of_order': st['out_of_order'],
                 'bytes': st['bytes'], 'seqs': st['seqs'], 'dup_seqs': st['dup_seqs'],
-                'first_rx': st['first_rx'], 'last_rx': st['last_rx'],
+                'first_rx': st['first_rx'], 'last_rx': st['last_rx'], 'arrivals': st['arrivals'],
                 'latency_mean': sum(lat)/len(lat) if lat else None,
                 'latency_p50': percentile(lat, 0.5),
                 'latency_p95': percentile(lat, 0.95),
@@ -123,6 +164,9 @@ async def experiment(radio, config):
             'rx_frames': rx_frames,
             'snapshot_mono': snapshot_mono,
             'links': [list(l) for l in config.links],
+            'mandates': [list(m) for m in config.mandates],
+            'schedules': schedule_log,
+            'queue': config.queue,
         }
         with open(config.results, 'w') as f:
             json.dump(result, f, indent=1)
@@ -143,7 +187,11 @@ def main():
     exp.add_argument('--flow', action='append', type=parse_flow, dest='flows', default=[],
                      metavar='DEST:PORT:RATE:SIZE[:COUNT]', help='add a UDP flow from this node')
     exp.add_argument('--link', action='append', type=parse_link, dest='links', default=[],
-                     metavar='SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE]]]', help='set the link from SRC to this node')
+                     metavar='SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE[:JITTER]]]]', help='set the link from SRC to this node')
+    exp.add_argument('--mandate', action='append', type=parse_mandate, dest='mandates', default=[],
+                     metavar='PORT:MAX_LATENCY_S', help='latency mandate for the flow to PORT')
+    exp.add_argument('--schedule-at', action='append', type=parse_schedule, dest='schedules', default=[],
+                     metavar='MONO:NODE,NODE,...', help='install a TDMA schedule at a host monotonic time')
     exp.add_argument('--warmup', type=float, default=3.0, help='seconds before traffic starts')
     exp.add_argument('--duration', type=float, default=10.0, help='seconds of traffic')
     exp.add_argument('--drain', type=float, default=3.0, help='seconds after traffic stops')

@@ -11,6 +11,7 @@
 #include <stdexcept>
 
 #include "logging.hh"
+#include "net/mgen.h"
 #include "sim/SimTraffic.hh"
 #include "util/net.hh"
 #include "util/sprintf.hh"
@@ -23,6 +24,12 @@ namespace {
 
 constexpr uint32_t kTrafficMagic = 0x46545244; // "DRTF"
 constexpr size_t   kAppHeader = 32;
+// Every payload starts with a standard (version 2) MGEN header, as the
+// Colosseum traffic the radio was built for does: FlowPerformance and
+// Packet::initMGENInfo take the flow ID (= destination port), sequence number
+// and send time from it, and mandates are keyed by that flow ID.
+constexpr size_t   kMGEN = 20;
+constexpr size_t   kMinPayload = kMGEN + kAppHeader;
 constexpr size_t   kFrameOverhead = sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr);
 
 uint32_t fnv1a(const uint8_t *p, size_t n, uint32_t h = 2166136261u)
@@ -34,9 +41,12 @@ uint32_t fnv1a(const uint8_t *p, size_t n, uint32_t h = 2166136261u)
     return h;
 }
 
+// Hash of a UDP payload, excluding the hash field itself.
 uint32_t payloadHash(const uint8_t *p, size_t n)
 {
-    return fnv1a(p + 32, n - 32, fnv1a(p, 28));
+    constexpr size_t h = kMGEN + 28;
+
+    return fnv1a(p + h + 4, n - h - 4, fnv1a(p, h));
 }
 
 uint64_t splitmix(uint64_t &x)
@@ -111,8 +121,8 @@ SimTraffic::~SimTraffic()
 
 void SimTraffic::addFlow(uint16_t port, NodeId dest, double rate, size_t size, uint64_t count, double start)
 {
-    if (size < kAppHeader || size + sizeof(struct ip) + sizeof(struct udphdr) > mtu_)
-        throw std::invalid_argument("flow payload must be between 32 bytes and MTU-28");
+    if (size < kMinPayload || size + sizeof(struct ip) + sizeof(struct udphdr) > mtu_)
+        throw std::invalid_argument("flow payload must be between 52 bytes and MTU-28");
     if (rate <= 0)
         throw std::invalid_argument("flow rate must be positive");
 
@@ -168,6 +178,21 @@ std::vector<uint8_t> SimTraffic::buildFrame(NodeId dest, uint16_t port, uint64_t
     put<uint16_t>(udp + 2, htons(port));
     put<uint16_t>(udp + 4, htons(sizeof(struct udphdr) + size));
 
+    uint8_t *mgen = app;
+
+    app = mgen + kMGEN;
+    {
+        WallClock::time_point wall = WallClock::now();
+
+        put<uint16_t>(mgen, htons(static_cast<uint16_t>(size)));        // messageSize
+        mgen[2] = MGEN_VERSION;
+        mgen[3] = MGEN_CLEAR;
+        put<uint32_t>(mgen + 4, htonl(port));                           // mgenFlowId
+        put<uint32_t>(mgen + 8, htonl(static_cast<uint32_t>(seq)));     // sequenceNumber
+        put<uint32_t>(mgen + 12, htonl(static_cast<uint32_t>(wall.get_full_secs())));
+        put<uint32_t>(mgen + 16, htonl(static_cast<uint32_t>(wall.get_frac_secs()*1e6)));
+    }
+
     put<uint32_t>(app, kTrafficMagic);
     app[4] = node_id_;
     app[5] = dest;
@@ -178,13 +203,13 @@ std::vector<uint8_t> SimTraffic::buildFrame(NodeId dest, uint16_t port, uint64_t
 
     uint64_t state = seq*0x100000001b3ull ^ (static_cast<uint64_t>(port) << 48) ^ node_id_;
 
-    for (size_t i = kAppHeader; i < size; i += 8) {
+    for (size_t i = kMinPayload; i < size; i += 8) {
         uint64_t r = splitmix(state);
 
-        std::memcpy(app + i, &r, std::min<size_t>(8, size - i));
+        std::memcpy(mgen + i, &r, std::min<size_t>(8, size - i));
     }
 
-    put<uint32_t>(app + 28, payloadHash(app, size));
+    put<uint32_t>(app + 28, payloadHash(mgen, size));
 
     return frame;
 }
@@ -287,14 +312,15 @@ void SimTraffic::send(std::shared_ptr<RadioPacket>&& pkt)
 
     std::lock_guard<std::mutex> lock(mutex_);
 
-    if (len < kFrameOverhead + kAppHeader
+    if (len < kFrameOverhead + kMinPayload
         || ntohs(get<uint16_t>(frame + 12)) != ETHERTYPE_IP
         || frame[sizeof(struct ether_header) + 9] != IPPROTO_UDP) {
         foreign_++;
         return;
     }
 
-    const uint8_t *app = frame + kFrameOverhead;
+    const uint8_t *payload = frame + kFrameOverhead;
+    const uint8_t *app = payload + kMGEN;
     size_t         size = len - kFrameOverhead;
 
     if (get<uint32_t>(app) != kTrafficMagic) {
@@ -305,7 +331,7 @@ void SimTraffic::send(std::shared_ptr<RadioPacket>&& pkt)
     auto       key = std::make_pair(static_cast<NodeId>(app[4]), get<uint16_t>(app + 6));
     RecvStats &st = recv_[key];
 
-    if (get<uint32_t>(app + 24) != size || get<uint32_t>(app + 28) != payloadHash(app, size)) {
+    if (get<uint32_t>(app + 24) != size || get<uint32_t>(app + 28) != payloadHash(payload, size)) {
         st.corrupt++;
         return;
     }
@@ -328,6 +354,7 @@ void SimTraffic::send(std::shared_ptr<RadioPacket>&& pkt)
     st.unique++;
     st.bytes += size;
     st.seqs.push_back(seq);
+    st.arrivals.push_back(t_rx*1e-9);
     st.latency.push_back((t_rx - get<int64_t>(app + 16))*1e-9);
 }
 

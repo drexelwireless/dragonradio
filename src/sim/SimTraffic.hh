@@ -52,6 +52,7 @@ public:
         double last_rx = 0;          ///< Last unique arrival (MonoClock sec)
         std::vector<double> latency; ///< One-way latency of unique packets (sec)
         std::vector<uint64_t> seqs;  ///< Unique sequence numbers in arrival order
+        std::vector<double> arrivals; ///< Arrival time of each unique packet (MonoClock sec)
         std::vector<uint64_t> dup_seqs; ///< Sequence numbers delivered more than once
     };
 

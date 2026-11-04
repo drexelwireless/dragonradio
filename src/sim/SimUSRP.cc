@@ -104,6 +104,7 @@ SimUSRP::SimUSRP(const std::string& air_path,
   , tx_pos_(0)
   , tx_burst_late_(false)
   , tx_burst_count_(0)
+  , tx_group_(0)
   , queued_samples_(0)
   , rx_pos_(0)
   , rendered_upto_(0)
@@ -223,6 +224,7 @@ void SimUSRP::sendBurst(int64_t start, const std::complex<float> *x, size_t n)
     hdr.fc = tx_freq_;
     hdr.nsamples = n;
     hdr.burst = tx_burst_count_++;
+    hdr.group = tx_group_;
 
     struct iovec iov[2] = { { &hdr, sizeof(hdr) },
                             { const_cast<std::complex<float>*>(x), n*sizeof(std::complex<float>) } };
@@ -247,6 +249,7 @@ void SimUSRP::burstTX(std::optional<MonoClock::time_point> when,
 
     if (start_of_burst) {
         tx_burst_late_ = false;
+        ++tx_group_;
 
         if (when) {
             t_next_tx_ = *when;
@@ -541,6 +544,15 @@ void SimUSRP::reader(void)
 
         b.src = hdr.node;
         b.start = hdr.start + link.delay;
+        if (link.jitter > 0) {
+            const uint32_t group = hdr.group; // AirHeader is packed
+            auto           it = jitter_.find(hdr.node);
+
+            if (it == jitter_.end() || it->second.first != group)
+                it = jitter_.insert_or_assign(hdr.node, std::make_pair(group,
+                    std::uniform_int_distribution<int64_t>(0, link.jitter)(rng_))).first;
+            b.start += it->second.second;
+        }
         b.fs = hdr.fs;
         b.shift_hz = shift;
         b.gain = static_cast<float>(std::pow(10.0, link.gain_db/20.0));

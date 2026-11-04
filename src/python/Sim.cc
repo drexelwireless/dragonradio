@@ -23,7 +23,7 @@ void exportSim(py::module &m)
              py::arg("seed") = 1,
              "Simulated radio device connected to an air relay")
         .def("setLink",
-            [](SimUSRP &self, uint8_t src, double gain_db, double cfo_hz, int64_t delay, double erasure)
+            [](SimUSRP &self, uint8_t src, double gain_db, double cfo_hz, int64_t delay, double erasure, int64_t jitter)
             {
                 sim::Link link;
 
@@ -31,6 +31,7 @@ void exportSim(py::module &m)
                 link.cfo_hz = cfo_hz;
                 link.delay = delay;
                 link.erasure = erasure;
+                link.jitter = jitter;
                 self.setLink(src, link);
             },
             py::arg("src"),
@@ -38,6 +39,7 @@ void exportSim(py::module &m)
             py::arg("cfo_hz") = 0.0,
             py::arg("delay") = 0,
             py::arg("erasure") = 0.0,
+            py::arg("jitter") = 0,
             "Set the directed link model from node src to this node")
         .def("getLink",
             [](SimUSRP &self, uint8_t src)
@@ -49,6 +51,7 @@ void exportSim(py::module &m)
                 d["cfo_hz"] = link.cfo_hz;
                 d["delay"] = link.delay;
                 d["erasure"] = link.erasure;
+                d["jitter"] = link.jitter;
                 return d;
             })
         .def_property("noise_power",
@@ -139,6 +142,7 @@ void exportSim(py::module &m)
                     e["bytes"] = st.bytes;
                     e["first_rx"] = st.first_rx;
                     e["last_rx"] = st.last_rx;
+                    e["arrivals"] = st.arrivals;
                     e["latency"] = st.latency;
                     e["seqs"] = st.seqs;
                     e["dup_seqs"] = st.dup_seqs;

@@ -16,9 +16,9 @@ import signal
 import struct
 import time
 
-HEADER = struct.Struct('<IHBBqddII')
+HEADER = struct.Struct('<IHBBqddIII')   # must match sim::AirHeader (44 bytes)
 MAGIC = 0x41535244
-VERSION = 1
+VERSION = 2
 HELLO = 1
 BURST = 2
 
@@ -39,7 +39,7 @@ class Air:
         try:
             while True:
                 hdr = await reader.readexactly(HEADER.size)
-                magic, version, kind, src, start, fs, fc, n, burst = HEADER.unpack(hdr)
+                magic, version, kind, src, start, fs, fc, n, burst, group = HEADER.unpack(hdr)
                 if magic != MAGIC or version != VERSION:
                     break
                 payload = await reader.readexactly(8*n) if n else b''
@@ -60,7 +60,7 @@ class Air:
                 if lead < 0:
                     st['late'] += 1
                 if self.burst_log is not None:
-                    self.burst_log.write(f'{src},{burst},{start},{n},{fs:.17g},{fc:.17g},{lead:.6f}\n')
+                    self.burst_log.write(f'{src},{burst},{group},{start},{n},{fs:.17g},{fc:.17g},{lead:.6f}\n')
                 for w, dst in list(self.clients.items()):
                     if w is writer:
                         continue
@@ -90,7 +90,7 @@ async def main(args):
         os.unlink(args.socket)
     burst_log = open(args.burst_log, 'w') if args.burst_log else None
     if burst_log:
-        burst_log.write('node,burst,start,nsamples,fs,fc,lead\n')
+        burst_log.write('node,burst,group,start,nsamples,fs,fc,lead\n')
     air = Air(args.max_backlog, burst_log)
     server = await asyncio.start_unix_server(air.handle, path=args.socket)
     stop = asyncio.Event()
