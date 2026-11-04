@@ -241,8 +241,16 @@ def summarize(args, outdir, procs, monitor, rate, pps, queue_bytes, t_launch):
         # CPU time for threads that block when idle.
         meters = meter_utilization(stats, t_traffic0 + skip, t_traffic1) if t_traffic0 is not None else {}
         node['work_utilization'] = meters
+        node['sim_device_busy'] = {k: by_comm[k]['busy_max'] for k in SIM_THREADS if k in by_comm}
         load = {k: v['busy_max'] for k, v in by_comm.items() if k not in SIM_THREADS and not spinning(k)}
-        load.update({k: v for k, v in meters.items()})
+        load.update({k: v for k, v in meters.items() if k != 'dr-sim-render'})
+        # The MAC RX thread also runs the simulated device's rendering
+        # (noise and link model) inside burstRX; that is device cost, not
+        # radio work. Single RX stream per node, so one render meter.
+        if 'dr-mac-rx' in load and 'dr-sim-render' in meters:
+            node['mac_rx_busy_including_device_model'] = load['dr-mac-rx']
+            load['dr-mac-rx'] = max(0.0, load['dr-mac-rx'] - meters['dr-sim-render'])
+            node['sim_device_busy']['dr-sim-render'] = meters['dr-sim-render']
         node['thread_load'] = load
         busiest = max(load.items(), key=lambda kv: kv[1]) if load else (None, 0.0)
         node['busiest_radio_thread'] = busiest[0]
@@ -251,7 +259,6 @@ def summarize(args, outdir, procs, monitor, rate, pps, queue_bytes, t_launch):
         node['process_cpus'] = sum(v['busy_sum'] for v in by_comm.values())
         node['spinning_cpus'] = sum(v['busy_sum'] for k, v in by_comm.items() if spinning(k))
         node['radio_work_cpus'] = sum(load.values())
-        node['sim_device_busy'] = {k: by_comm[k]['busy_max'] for k in SIM_THREADS if k in by_comm}
         checks.append((f'node {n}: busiest radio thread {busiest[0]} {100*busiest[1]:.1f}% busy <= 50% (headroom >= 2x)',
                        busiest[1] <= 0.5 and bool(meters)))
         for k, b in node['sim_device_busy'].items():

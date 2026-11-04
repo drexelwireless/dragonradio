@@ -13,6 +13,7 @@
 
 #include "logging.hh"
 #include "sim/SimUSRP.hh"
+#include "util/WorkMeter.hh"
 #include "util/threads.hh"
 
 namespace sim {
@@ -335,15 +336,18 @@ void SimUSRP::waitUntil(const uhd::time_spec_t &t)
 
 void SimUSRP::render(int64_t n0, size_t n, std::complex<float> *out)
 {
+    // Device-model cost (noise and link rendering) runs on the caller's
+    // thread, the MAC's RX thread; metered so the P4 soak can separate it
+    // from the radio's own receive work.
+    static WorkMeter            meter("dr-sim-render");
+    WorkMeter::Scope            work(meter);
     std::lock_guard<std::mutex> lock(rx_mutex_);
     const int64_t               n1 = n0 + static_cast<int64_t>(n);
 
     if (out) {
         if (noise_std_ > 0) {
-            std::normal_distribution<float> dist(0.0f, noise_std_);
-
             for (size_t i = 0; i < n; ++i)
-                out[i] = std::complex<float>(dist(noise_rng_), dist(noise_rng_));
+                out[i] = noise_rng_(noise_std_);
         } else
             std::fill(out, out + n, std::complex<float>(0.0f, 0.0f));
 

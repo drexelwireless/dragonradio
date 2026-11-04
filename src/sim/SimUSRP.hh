@@ -3,6 +3,7 @@
 #ifndef SIM_SIMUSRP_HH_
 #define SIM_SIMUSRP_HH_
 
+#include <cmath>
 #include <complex>
 #include <condition_variable>
 #include <cstdint>
@@ -310,7 +311,52 @@ protected:
     float noise_std_;
 
     std::mt19937_64 rng_;
-    std::mt19937_64 noise_rng_;
+    /** @brief Complex Gaussian noise: xoshiro256** and Box-Muller (exact
+     * Gaussian up to float precision; about 5x cheaper than
+     * std::normal_distribution, which limited the simulated device at
+     * 5 MS/s in the P4 soak).
+     */
+    struct NoiseSource {
+        uint64_t s[4];
+
+        explicit NoiseSource(uint64_t seed)
+        {
+            // splitmix64 seeding
+            for (auto &w : s) {
+                uint64_t z = (seed += 0x9e3779b97f4a7c15ull);
+                z = (z ^ (z >> 30))*0xbf58476d1ce4e5b9ull;
+                z = (z ^ (z >> 27))*0x94d049bb133111ebull;
+                w = z ^ (z >> 31);
+            }
+        }
+
+        uint64_t next(void)
+        {
+            const uint64_t r = rotl(s[1]*5, 7)*9, t = s[1] << 17;
+            s[2] ^= s[0]; s[3] ^= s[1]; s[1] ^= s[2]; s[0] ^= s[3];
+            s[2] ^= t;
+            s[3] = rotl(s[3], 45);
+            return r;
+        }
+
+        /** @brief One complex sample with independent N(0, sigma^2) parts. */
+        std::complex<float> operator()(float sigma)
+        {
+            const uint64_t x = next();
+            // u1 in (0, 1] (never 0, so the log is finite), u2 in [0, 1).
+            const float u1 = (static_cast<float>(x >> 40) + 1.0f)*0x1.0p-24f;
+            const float u2 = static_cast<float>((x >> 16) & 0xffffff)*0x1.0p-24f;
+            const float r = sigma*std::sqrt(-2.0f*std::log(u1));
+            float       sn, cs;
+
+            sincosf(6.2831853071795864769f*u2, &sn, &cs);
+            return std::complex<float>(r*cs, r*sn);
+        }
+
+        static uint64_t rotl(uint64_t x, int k) { return (x << k) | (x >> (64 - k)); }
+    };
+
+    NoiseSource noise_rng_;
 
     Stats stats_;
 

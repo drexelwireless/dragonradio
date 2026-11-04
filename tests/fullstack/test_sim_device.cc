@@ -223,6 +223,23 @@ int main()
             p += std::norm(v);
         p /= y.size();
         CHECK(std::abs(10 * std::log10(p) + 20.0) < 0.2, "noise power %g dB", 10 * std::log10(p));
+        // Gaussian, independent I and Q, white: moments of the rendered noise
+        // (generator: xoshiro256** + Box-Muller since P4).
+        double mi = 0, mq = 0, vi = 0, vq = 0, ki = 0, iq = 0, lag = 0;
+        const double n = y.size();
+        for (auto v : y) { mi += v.real(); mq += v.imag(); }
+        mi /= n; mq /= n;
+        for (size_t k = 0; k < y.size(); ++k) {
+            const double a_ = y[k].real() - mi, b_ = y[k].imag() - mq;
+            vi += a_ * a_; vq += b_ * b_; ki += a_ * a_ * a_ * a_; iq += a_ * b_;
+            if (k) lag += a_ * (y[k - 1].real() - mi);
+        }
+        vi /= n; vq /= n; ki = ki / n / (vi * vi); iq /= n * std::sqrt(vi * vq); lag /= n * vi;
+        const double sd = std::sqrt(vi);
+        CHECK(std::abs(mi) < 5 * sd / std::sqrt(n) && std::abs(mq) < 5 * sd / std::sqrt(n), "noise mean %g %g", mi, mq);
+        CHECK(std::abs(vi / vq - 1) < 0.05, "I/Q variance ratio %g", vi / vq);
+        CHECK(std::abs(ki - 3) < 0.15, "I kurtosis %g (Gaussian 3)", ki);
+        CHECK(std::abs(iq) < 0.03 && std::abs(lag) < 0.03, "I/Q correlation %g, lag-1 correlation %g", iq, lag);
         b.setNoisePower(-300.0);
     }
 
