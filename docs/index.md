@@ -32,6 +32,8 @@ building/index
 running/index
 colosseum
 utilities
+radiowars2024-port
+defaults-2026-11
 ```
 
 ```{toctree}
