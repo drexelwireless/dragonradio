@@ -159,10 +159,15 @@ void USRP::syncTime(double random_bias, bool use_pps)
 
         usrp_->set_time_next_pps(uhd::time_spec_t(static_cast<time_t>(edge) + 1, 0.0));
 
-        // Let that edge pass, then check that it took.
-        std::this_thread::sleep_for(1100ms);
+        // Check that it took, one edge later: on the N210, at the edge that
+        // loads the time the last-PPS register still latches the old clock, and
+        // it shows the new time from the following edge (measured on grid08 and
+        // grid19, 2026-11-05). After that edge it reads edge + 2 exactly.
+        std::this_thread::sleep_for(2100ms);
 
-        if (usrp_->get_time_last_pps().get_full_secs() != static_cast<time_t>(edge) + 1)
+        const uhd::time_spec_t pps = usrp_->get_time_last_pps();
+
+        if (pps.get_full_secs() != static_cast<time_t>(edge) + 2 || pps.get_frac_secs() > 1e-6)
             throw std::runtime_error("syncTime: the device time did not take at the PPS edge");
 
         logUSRP(LOGINFO, "time set at PPS edge to %lld (edge %+.3f s from the host's whole second)",
