@@ -112,11 +112,11 @@
    }
   },
   {
-   "name": "XW",
+   "name": "XW2",
    "nodes": [
     {
      "id": 1,
-     "host": "grid44",
+     "host": "grid57",
      "family": "X310",
      "addr": "addr=192.168.40.2",
      "tx_gain": 5,
@@ -125,7 +125,7 @@
     },
     {
      "id": 2,
-     "host": "grid57",
+     "host": "grid62",
      "family": "X310",
      "addr": "addr=192.168.40.2",
      "tx_gain": 5,
@@ -136,7 +136,7 @@
    "strata": {
     "pair_type": "X310<->X310",
     "strength": "weak",
-    "placement": "grid44-grid57 (radio map 2026-10-25: tone SNR 72.1 dB at TX/RX 5 dB)",
+    "placement": "grid57-grid62 (radio map 2026-10-25: tone SNR 71.3 dB at TX/RX 5 dB; replaces grid44-grid57: grid44 X310 not openable 2026-11-05)",
     "power": "TX 5/5 dB, RX 10/10 dB",
     "clock": "independent oscillators, timesync only"
    }

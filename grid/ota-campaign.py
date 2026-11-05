@@ -125,8 +125,26 @@ def trial_order(campaign):
     return order
 
 
-def plans(campaign, run_dir, reservation):
-    """The ota-fullstack.py plan for every trial, in run order."""
+def without_hosts(campaign, exclude):
+    """The campaign without the cells that use any of the excluded hosts (nodes
+    that failed the pipeline's health check)."""
+    exclude = set(exclude or ())
+    if not exclude:
+        return campaign
+    if 'cells' not in campaign:
+        if any(n.get('host') in exclude for n in campaign['nodes']):
+            raise CampaignError(f'every cell uses an excluded host ({" ".join(sorted(exclude))})')
+        return campaign
+    keep = [c for c in campaign['cells'] if not any(n.get('host') in exclude for n in c['nodes'])]
+    if not keep:
+        raise CampaignError(f'every cell uses an excluded host ({" ".join(sorted(exclude))})')
+    return dict(campaign, cells=keep)
+
+
+def plans(campaign, run_dir, reservation, exclude=()):
+    """The ota-fullstack.py plan for every trial, in run order (without the cells
+    that use an excluded host)."""
+    campaign = without_hosts(campaign, exclude)
     for key in ('campaign_id', 'rf_approval_reference', 'frequency', 'bandwidth', 'max_tx_gain',
                 'phys', 'blocks', 'workspace', 'workspace_commit', 'results_root', 'node_local_root',
                 'traffic', 'strata', 'ssh'):
@@ -181,11 +199,11 @@ def plans(campaign, run_dir, reservation):
     return out
 
 
-def write_plans(campaign, run_dir, reservation):
+def write_plans(campaign, run_dir, reservation, exclude=()):
     pdir = Path(run_dir) / 'plans'
     pdir.mkdir(parents=True, exist_ok=True)
     result = []
-    for plan in plans(campaign, run_dir, reservation):
+    for plan in plans(campaign, run_dir, reservation, exclude):
         try:
             built = ota.build(plan)          # validates; executes nothing
         except ota.PlanError as e:
@@ -196,8 +214,8 @@ def write_plans(campaign, run_dir, reservation):
     return result
 
 
-def run(campaign, run_dir, reservation, python):
-    written = write_plans(campaign, run_dir, reservation)
+def run(campaign, run_dir, reservation, python, exclude=()):
+    written = write_plans(campaign, run_dir, reservation, exclude)
     log = Path(run_dir) / 'campaign.log'
     summaries = []
 
@@ -247,7 +265,10 @@ def main(argv=None):
     ap.add_argument('--reservation', default='PENDING', help='grid reservation ID (known at run time)')
     ap.add_argument('--python', default=sys.executable, help='Python for ota-fullstack.py (needs h5py)')
     ap.add_argument('--execute', action='store_true', help='RUN THE TRIALS: opens radios and transmits')
+    ap.add_argument('--exclude-hosts', default='',
+                    help='hosts (space or comma separated) whose cells are left out (failed health checks)')
     args = ap.parse_args(argv)
+    exclude = [h for h in args.exclude_hosts.replace(',', ' ').split() if h]
     campaign = json.loads(args.campaign.read_text())
     try:
         if args.action == 'hosts':
@@ -258,7 +279,7 @@ def main(argv=None):
             print(f'{args.action} needs --run-dir', file=sys.stderr)
             return 2
         if args.action == 'plan':
-            for plan, path, warnings in write_plans(campaign, args.run_dir, args.reservation):
+            for plan, path, warnings in write_plans(campaign, args.run_dir, args.reservation, exclude):
                 print(f'{path}: {plan["phy"]} block {plan["strata"]["pair_block"]}'
                       + ''.join(f'\n  warning: {w}' for w in warnings))
             print('dry run: nothing was executed')
@@ -272,7 +293,7 @@ def main(argv=None):
         if str(campaign.get('rf_approval_reference', '')).startswith(ota.NOT_APPROVED):
             print('run refused: rf_approval_reference marks this campaign as not approved for RF', file=sys.stderr)
             return 2
-        return run(campaign, args.run_dir, args.reservation, args.python)
+        return run(campaign, args.run_dir, args.reservation, args.python, exclude)
     except (CampaignError, ota.PlanError) as e:
         print(f'campaign rejected: {e}', file=sys.stderr)
         return 2

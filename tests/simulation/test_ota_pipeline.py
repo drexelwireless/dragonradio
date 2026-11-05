@@ -45,6 +45,7 @@ fi
 case $cmd in
   *ota-node-health.sh*)
     [ -e "$state/health-fail" ] && { echo "FAIL radio does not answer ping"; exit 1; }
+    [ -e "$state/health-fail-$host" ] && { echo "FAIL probe found no motherboard"; exit 1; }
     echo "host=$host"; echo "  Mboard: X310"; exit 0 ;;
   *"systemctl disable --now dragonradio.service"*) echo "Removed dragonradio.service"; exit 0 ;;
   *run-sim-fullstack.sh*) echo "== clean-arq"; echo "   PASSED"; exit 0 ;;
@@ -123,7 +124,7 @@ class Pipeline(unittest.TestCase):
                         workspace_tar=str(self.tar), results_root=str(self.tmp / 'results'),
                         ssh={'head': 'head.example', 'key': '/dev/null'})
         self.campaign.write_text(json.dumps(campaign))
-        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid44', 'grid57', 'grid59']
+        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid57', 'grid62', 'grid59']
         (self.state / 'nodes').write_text(''.join(f'{h} READY\n' for h in hosts))
         run = self.tmp / 'run-cells'
         p = self.pipeline(run, STOP_BEFORE='5')
@@ -139,6 +140,38 @@ class Pipeline(unittest.TestCase):
             self.assertTrue(health[h].endswith(want), health[h])
         gates = sorted({line.split(':')[0] for line in ssh.splitlines() if 'run-sim-fullstack.sh' in line})
         self.assertEqual(gates, ['grid08', 'grid60'])                     # first N210, first X310
+
+    def test_unhealthy_node_drops_its_cells(self):
+        # One X310 fails its health check: only its cells are left out, the gate
+        # runs on healthy nodes, and the trials get the exclusion.
+        campaign = json.loads((ROOT / 'grid/ota-campaign.n210-x310.json').read_text())
+        campaign.update(workspace_commit=COMMIT, workspace=str(self.tmp / 'node' / 'drfs-ws'),
+                        workspace_tar=str(self.tar), results_root=str(self.tmp / 'results'),
+                        ssh={'head': 'head.example', 'key': '/dev/null'})
+        self.campaign.write_text(json.dumps(campaign))
+        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid57', 'grid62', 'grid59']
+        (self.state / 'nodes').write_text(''.join(f'{h} READY\n' for h in hosts))
+        (self.state / 'health-fail-grid60').write_text('')           # in XS only
+        run = self.tmp / 'run-drop'
+        p = self.pipeline(run, STOP_BEFORE='5')
+        log = (run / 'pipeline.log').read_text()
+        self.assertEqual(p.returncode, 0, log + p.stderr)
+        self.assertIn('health failed on: grid60; their cells are left out: running 30 trials', log)
+        self.assertEqual((run / 'unhealthy').read_text().split(), ['grid60'])
+        gates = sorted({line.split(':')[0] for line in (self.state / 'ssh.log').read_text().splitlines()
+                        if 'run-sim-fullstack.sh' in line})
+        self.assertEqual(gates, ['grid08', 'grid61'])                     # first healthy X310
+        plans = sorted(p.name for p in (run / 'plans-healthy' / 'plans').glob('*.json'))
+        self.assertFalse(any('-XS-' in n for n in plans))
+        self.assertTrue((run / 'stage-6.done').exists())
+
+    def test_every_cell_unhealthy_stops(self):
+        (self.state / 'health-fail-grid91').write_text('')
+        run = self.tmp / 'run-allbad'
+        p = self.pipeline(run)
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn('no cell is left', (run / 'pipeline.log').read_text())
+        self.assertTrue((self.state / 'stopped').exists())
         self.assertNotIn('ota-fullstack.py', ssh)
         self.assertTrue((run / 'stage-6.done').exists())
 
@@ -150,7 +183,7 @@ class Pipeline(unittest.TestCase):
                         workspace=str(self.tmp / 'node' / 'drport'), results_root=str(self.tmp / 'results'),
                         ssh={'head': 'head.example', 'key': '/dev/null'})
         self.campaign.write_text(json.dumps(campaign))
-        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid44', 'grid57', 'grid59']
+        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid57', 'grid62', 'grid59']
         (self.state / 'nodes').write_text(''.join(f'{h} READY\n' for h in hosts))
         run = self.tmp / 'run-image'
         p = self.pipeline(run, STOP_BEFORE='5')
@@ -237,7 +270,7 @@ class Campaign(unittest.TestCase):
         self.assertIn('pps-mixed01-b01-XS-ofdm', ids)
         for b in (1, 2, 3):
             runs = sorted((p['strata']['cell'], p['phy']) for p in plans if p['strata']['pair_block'] == b)
-            self.assertEqual(runs, sorted((cell, phy) for cell in ('S1', 'W1', 'XS', 'XW', 'NXS', 'NXW')
+            self.assertEqual(runs, sorted((cell, phy) for cell in ('S1', 'W1', 'XS', 'XW2', 'NXS', 'NXW')
                                           for phy in ('native-ofdm', 'ofdm')))
         xs = next(p for p in plans if p['strata']['cell'] == 'XS')
         self.assertEqual([n['host'] for n in xs['nodes']], ['grid60', 'grid61'])
@@ -248,7 +281,7 @@ class Campaign(unittest.TestCase):
             self.mod.ota.build(p)                    # every plan validates
         hosts = self.mod.hosts(c)
         self.assertEqual([h[0] for h in hosts],
-                         ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid44', 'grid57', 'grid59'])
+                         ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid57', 'grid62', 'grid59'])
         self.assertEqual(dict((h, clk) for h, _, clk, _ in hosts)['grid01'], 'external')   # external in W1
         self.assertEqual(dict((h, clk) for h, _, clk, _ in hosts)['grid61'], 'internal')
 

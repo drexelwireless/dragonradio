@@ -174,7 +174,9 @@ s2_install() {
 }
 
 s3_health() {
-    # Every node is checked (a full picture for the rehearsal), then any failure fails the stage.
+    # Every node is checked (a full picture for the rehearsal). A node that fails
+    # takes its cells out of the campaign (RUN/unhealthy, passed to the trials);
+    # the stage fails only if no cell is left.
     # The check runs from RUN (shared home), so it needs no workspace on the node.
     cp "$HERE/ota-node-health.sh" "$RUN/ota-node-health.sh"
     local n addr ref i=0 addrs refs bad=""
@@ -189,7 +191,16 @@ s3_health() {
             bad="$bad $n"
         fi
     done
-    [ -z "$bad" ] || die "health failed on:$bad (health-NODE.log)"
+    echo "$bad" | xargs -n1 2>/dev/null | sort -u > "$RUN/unhealthy"
+    [ -z "$bad" ] && return 0
+    if ! "$PY" "$HERE/ota-campaign.py" plan "$CAMPAIGN" --run-dir "$RUN/plans-healthy" --exclude-hosts "$bad" \
+            > "$RUN/plans-healthy.log" 2>&1; then
+        die "health failed on:$bad and no cell is left without them (health-NODE.log, plans-healthy.log)"
+    fi
+    log "health failed on:$bad; their cells are left out: running $(ls "$RUN/plans-healthy/plans" | wc -l) trials"
+    # The simulation gate runs on a healthy node of each family.
+    GATE_NODES=$(awk 'NR==FNR {bad[$1]=1; next} !($1 in bad) && !seen[$4]++ {print $1}' "$RUN/unhealthy" - <<< "$HOSTS" | xargs)
+    echo "$GATE_NODES" > "$RUN/gate-nodes"
 }
 
 s4_gate() {
@@ -198,6 +209,7 @@ s4_gate() {
     # native and the liquid production configuration.
     local n try phy
     if [ "$IMAGE_ONLY" = 1 ]; then log "sim gate: skipped (image-only rehearsal, no workspace)"; return 0; fi
+    [ -s "$RUN/gate-nodes" ] && GATE_NODES=$(cat "$RUN/gate-nodes")
     for n in $GATE_NODES; do
         for phy in native liquid; do
             local args=""; [ $phy = liquid ] && args="-- --phy ofdm -c rs8"
@@ -217,7 +229,7 @@ s4_gate() {
 s5_trials() {
     [ "$IMAGE_ONLY" = 1 ] && { log "trials refused: image-only campaign (no workspace)"; return 1; }
     "$PY" "$HERE/ota-campaign.py" run "$CAMPAIGN" --run-dir "$RUN" --reservation "$(cat "$RUN/reservation.id")" \
-        --python "$PY" --execute 2>&1 | tee -a "$RUN/pipeline.log"
+        --python "$PY" --execute --exclude-hosts "$(cat "$RUN/unhealthy" 2>/dev/null | xargs)" 2>&1 | tee -a "$RUN/pipeline.log"
     return "${PIPESTATUS[0]}"
 }
 
