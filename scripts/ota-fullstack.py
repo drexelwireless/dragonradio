@@ -280,8 +280,10 @@ def node_script(plan, node):
               f'for i in $(seq 1 {int(go_wait * 5)}); do ls "$SHARED" >/dev/null; [ -e "$SHARED/GO" ] && break; sleep 0.2; done',
               '[ -e "$SHARED/GO" ] || { echo "no GO from controller"; exit 15; }',
               '# Applications start at the GO file\'s wall-clock time (NTP), mapped to CLOCK_MONOTONIC.',
-              'START=$(python3 -c "import json, sys, time; t = json.load(open(sys.argv[1]))[\'start_wall\']; '
-              'print(time.monotonic() + max(0.0, t - time.time()))" "$SHARED/GO")',
+              '# Retry the read: over NFS the file can appear before its contents (belt and braces with the',
+              '# controller\'s atomic rename).',
+              'START=$(python3 -c "import json, sys, time\nfor i in range(50):\n    try:\n        t = json.load(open(sys.argv[1]))[\'start_wall\']; break\n    except (ValueError, KeyError, OSError):\n        time.sleep(0.1)\nelse:\n    sys.exit(\'GO unreadable\')\nprint(time.monotonic() + max(0.0, t - time.time()))" "$SHARED/GO")',
+              '[ -n "$START" ] || { echo "GO file unreadable"; exit 15; }',
               f'{app_run}{wsenv} timeout --signal=INT --kill-after=5s {int(duration + drain + 15)}s {shlex.join(app)} --start-at "$START" > "$LOCAL/app.log" 2>&1 &',
               'APP=$!',
               'wait "$APP" || echo "app exit $?"',
@@ -384,7 +386,12 @@ def execute(plan, built):
                 raise RuntimeError('not every node became ready; no GO written; inspect node logs')
             time.sleep(0.2)
         now = time.time()
-        (trial_dir / 'GO').write_text(json.dumps({'wall': now, 'start_wall': now + plan.get('start_lead_s', 20)}))
+        # Atomic: write a temporary file and rename it, so a node polling over
+        # NFS never sees an empty or partial GO (2026-11-05: a node read an empty
+        # GO, failed to parse it, and its radio was stopped).
+        tmp = trial_dir / '.GO.tmp'
+        tmp.write_text(json.dumps({'wall': now, 'start_wall': now + plan.get('start_lead_s', 20)}))
+        os.replace(tmp, trial_dir / 'GO')
         limit = (plan.get('warmup_s', 20) + plan.get('go_timeout_s', 90) + plan.get('start_lead_s', 20)
                  + plan['duration_s'] + plan.get('drain_s', 5) + 120)
         for nid, p in procs.items():
