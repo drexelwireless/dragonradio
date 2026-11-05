@@ -330,6 +330,32 @@ def build(plan):
             'go_file': f'{trial_dir}/GO', 'hardware_opened': False}
 
 
+def failed_summary(plan, trial_dir, apps, continuity, missing):
+    """Summary of a trial in which some node's results are missing: every check
+    that can be made from what exists, and the UDP flows from the application
+    counts (sent by the source, unique datagrams received by the destination)."""
+    flows = []
+    for t in plan['traffic']:
+        if t.get('kind') != 'udp':
+            continue
+        src, dst = apps.get(t['src']), apps.get(t['dst'])
+        sent = next((u['sent'] for u in (src or {}).get('udp_send', []) if u['port'] == t['port']), None)
+        recv = (dst or {}).get('udp_recv', {}).get(str(t['port']))
+        delivered = recv['unique'] if recv else None
+        flows.append({'flow': f'{t["src"]}->{t["dst"]}:{t["port"]}', 'kind': 'udp', 'sent': sent,
+                      'delivered': delivered,
+                      'delivery': (delivered / sent) if sent and delivered is not None else None})
+    checks = [{'check': f'result file present: {m}', 'passed': False} for m in missing]
+    return {'scenario': f'ota-{plan["trial_id"]}', 'passed': False, 'incomplete': True, 'missing': missing,
+            'checks': checks, 'flows': flows,
+            'continuity': {str(k): v for k, v in continuity.items() if v is not None},
+            'continuity_ok': False,
+            'strata': dict(plan['strata'], phy=plan['phy'], bandwidth=plan['bandwidth'],
+                           frequency=plan['frequency'], build=plan['workspace_commit']),
+            'plan': {k: plan[k] for k in ('reservation_id', 'rf_approval_reference', 'trial_id')},
+            'valid_for_rf_conclusions': False}
+
+
 def score(plan, trial_dir):
     """Score a completed trial with the simulation's evaluation (tap scenarios)."""
     sys.path.insert(0, str(ROOT / 'scripts'))
@@ -339,11 +365,26 @@ def score(plan, trial_dir):
     spec.loader.exec_module(simfs)
     ids = [n['id'] for n in plan['nodes']]
     results, apps, continuity = {}, {}, {}
+    missing = []
+
+    def load(path):
+        try:
+            return json.loads(path.read_text())
+        except (OSError, ValueError):
+            missing.append(str(path.relative_to(trial_dir)))
+            return None
     for n in ids:
         d = Path(trial_dir) / f'node{n}'
-        results[n] = json.loads((d / f'node{n}.json').read_text())
-        apps[n] = json.loads((d / f'app{n}.json').read_text())
-        continuity[n] = json.loads((d / 'continuity.json').read_text())
+        results[n] = load(d / f'node{n}.json')
+        apps[n] = load(d / f'app{n}.json')
+        continuity[n] = load(d / 'continuity.json')
+    if missing:
+        # A node's radio or application did not finish (2026-11-05: an X310 radio
+        # stalled for seconds at a time and was killed at its time limit). That is a
+        # trial result, not an infrastructure failure: score it as failed, keep the
+        # application counts that exist, and let the campaign continue.
+        return failed_summary(plan, trial_dir, apps, continuity, missing)
+    for n in ids:
         dev = results[n]['device']
         dev['rx_late'] = continuity[n].get('rx_error', 0)
         dev['rx_overflows'] = continuity[n].get('rx_error', 0)
