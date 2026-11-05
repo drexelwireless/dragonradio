@@ -72,6 +72,9 @@ class App:
         self.lock = threading.Lock()
         self.results = {'udp_send': [], 'udp_recv': {}, 'tcp_server': [], 'tcp_bulk': [], 'tcp_rr': [], 'errors': []}
         self.stop = threading.Event()
+        # UDP latency clock: CLOCK_MONOTONIC (one host) or the wall clock (--wall-clock).
+        self.stamp_ns = time.time_ns if getattr(args, 'wall_clock', False) else time.monotonic_ns
+        self.results['udp_clock'] = 'wall' if getattr(args, 'wall_clock', False) else 'monotonic'
 
     def error(self, what, exc):
         with self.lock:
@@ -92,7 +95,7 @@ class App:
             if delay > 0:
                 time.sleep(delay)
             body = stream_bytes(b'udp%d:%d' % (port, sent), size - UDP_HDR.size - 32)
-            hdr = UDP_HDR.pack(UDP_MAGIC, port, sent, time.monotonic_ns(), size)
+            hdr = UDP_HDR.pack(UDP_MAGIC, port, sent, self.stamp_ns(), size)
             try:
                 sock.sendto(hdr + body + hashlib.sha256(hdr + body).digest(), (dest, port))
             except OSError:
@@ -114,7 +117,7 @@ class App:
                 data, _ = sock.recvfrom(65536)
             except socket.timeout:
                 continue
-            now = time.monotonic_ns()
+            now = self.stamp_ns()
             if len(data) < UDP_HDR.size + 32:
                 st['corrupt'] += 1
                 continue
@@ -294,6 +297,10 @@ def main():
     parser.add_argument('--tcp-bulk', action='append', default=[], type=split((str, int, int)))
     parser.add_argument('--tcp-rr', action='append', default=[], type=split((str, int, int, int)))
     parser.add_argument('--start-at', type=float, required=True, help='CLOCK_MONOTONIC start time')
+    parser.add_argument('--wall-clock', action='store_true',
+                        help='stamp UDP packets with the wall clock (CLOCK_REALTIME), for one-way latency between '
+                             'hosts whose clocks are NTP-synchronized (over the air); default CLOCK_MONOTONIC, '
+                             'valid only when every node runs on one host (simulation)')
     parser.add_argument('--duration', type=float, required=True)
     parser.add_argument('--linger', type=float, default=5.0)
     parser.add_argument('--results', required=True)

@@ -213,7 +213,9 @@ def node_script(plan, node):
               '--warmup', str(warmup + go_wait + lead), '--duration', str(duration), '--drain', str(drain),
               '--ready-file', f'{local}/ready.json', '--results', f'{local}/node{nid}.json']
     app = [f'{ws}/dragonradio/venv/bin/python', f'{ws}/dragonradio/scripts/sim-netapp.py'] + app_args(plan, nid) + [
-        '--duration', str(duration), '--linger', str(drain), '--results', f'{local}/app{nid}.json']
+        '--duration', str(duration), '--linger', str(drain), '--results', f'{local}/app{nid}.json',
+        # One-way UDP latency between hosts: NTP wall clocks (monotonic clocks differ per host).
+        '--wall-clock']
     patterns = ' '.join(f'{k}={q(v)}' for k, v in CONTINUITY.items())
     # The tree's venv (as in grid/run-sim-fullstack.sh): this tree's Python
     # package first, then the image venv's packages. The radio's embedded
@@ -284,7 +286,9 @@ def node_script(plan, node):
               '# controller\'s atomic rename).',
               'START=$(python3 -c "import json, sys, time\nfor i in range(50):\n    try:\n        t = json.load(open(sys.argv[1]))[\'start_wall\']; break\n    except (ValueError, KeyError, OSError):\n        time.sleep(0.1)\nelse:\n    sys.exit(\'GO unreadable\')\nprint(time.monotonic() + max(0.0, t - time.time()))" "$SHARED/GO")',
               '[ -n "$START" ] || { echo "GO file unreadable"; exit 15; }',
-              f'{app_run}{wsenv} timeout --signal=INT --kill-after=5s {int(duration + drain + 15)}s {shlex.join(app)} --start-at "$START" > "$LOCAL/app.log" 2>&1 &',
+              # The app waits until START (up to the start lead after GO) before its traffic, so its time
+              # limit includes the lead (2026-11-05: without it the app was interrupted while finishing).
+              f'{app_run}{wsenv} timeout --signal=INT --kill-after=5s {int(duration + drain + 15 + lead)}s {shlex.join(app)} --start-at "$START" > "$LOCAL/app.log" 2>&1 &',
               'APP=$!',
               'wait "$APP" || echo "app exit $?"',
               'APP=',
