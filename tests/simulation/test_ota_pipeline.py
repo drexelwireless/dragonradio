@@ -140,12 +140,14 @@ class Pipeline(unittest.TestCase):
             self.assertTrue(health[h].endswith(want), health[h])
         gates = sorted({line.split(':')[0] for line in ssh.splitlines() if 'run-sim-fullstack.sh' in line})
         self.assertEqual(gates, ['grid08', 'grid60'])                     # first N210, first X310
+        self.assertNotIn('ota-fullstack.py', ssh)
+        self.assertTrue((run / 'stage-6.done').exists())
 
     def test_unhealthy_node_drops_its_cells(self):
         # One X310 fails its health check: only its cells are left out, the gate
         # runs on healthy nodes, and the trials get the exclusion.
         campaign = json.loads((ROOT / 'grid/ota-campaign.n210-x310.json').read_text())
-        campaign.update(workspace_commit=COMMIT, workspace=str(self.tmp / 'node' / 'drfs-ws'),
+        campaign.update(workspace_commit=COMMIT, workspace=str(self.tmp / 'node' / 'drport'),
                         workspace_tar=str(self.tar), results_root=str(self.tmp / 'results'),
                         ssh={'head': 'head.example', 'key': '/dev/null'})
         self.campaign.write_text(json.dumps(campaign))
@@ -172,8 +174,6 @@ class Pipeline(unittest.TestCase):
         self.assertNotEqual(p.returncode, 0)
         self.assertIn('no cell is left', (run / 'pipeline.log').read_text())
         self.assertTrue((self.state / 'stopped').exists())
-        self.assertNotIn('ota-fullstack.py', ssh)
-        self.assertTrue((run / 'stage-6.done').exists())
 
     def test_image_only_rehearsal(self):
         # No workspace: nothing installed, health on the image's own tools,
