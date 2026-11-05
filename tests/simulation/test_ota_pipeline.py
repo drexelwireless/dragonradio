@@ -46,6 +46,7 @@ case $cmd in
   *ota-node-health.sh*)
     [ -e "$state/health-fail" ] && { echo "FAIL radio does not answer ping"; exit 1; }
     echo "host=$host"; echo "  Mboard: X310"; exit 0 ;;
+  *"systemctl disable --now dragonradio.service"*) echo "Removed dragonradio.service"; exit 0 ;;
   *run-sim-fullstack.sh*) echo "== clean-arq"; echo "   PASSED"; exit 0 ;;
   *) bash -c "$cmd" ;;
 esac

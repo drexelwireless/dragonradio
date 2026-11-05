@@ -159,6 +159,13 @@ s2_install() {
             log "install: $n reachable (image only, nothing installed)"
             continue
         fi
+        # The class image enables DragonRadio's own dragonradio.service (radiowars.py,
+        # from its install.sh). The reservation's --no-dragonradio-service does not
+        # always keep it from running (2026-11-05: still running on grid08), and a
+        # second radio on the device would collide with the trial's. Stop and
+        # disable it in this reservation's container; record what was running.
+        node_ssh "$n" "S=; [ \$(id -u) = 0 ] || S='sudo -n'; pgrep -a -x dragonradio | sed 's/^/before: /'; \$S systemctl disable --now dragonradio.service 2>&1 | tail -1; sleep 2; pgrep -a -x dragonradio | sed 's/^/still running: /'; true" \
+            > "$RUN/service-$n.log" 2>&1
         node_ssh "$n" "rm -rf '$WS' && mkdir -p '$(dirname "$WS")' && tar -xzf '$WS_TAR' -C '$(dirname "$WS")' && cat '$WS/dragonradio/COMMIT'" \
             > "$RUN/install-$n.log" 2>&1 || die "install on $n failed (install-$n.log)"
         grep -qx "$COMMIT" "$RUN/install-$n.log" || die "install on $n: wrong commit"

@@ -41,7 +41,10 @@ fi
 avail=$(df --output=avail -k /tmp | tail -1)
 echo "tmp_free_kb=$avail"
 [ "$avail" -gt 2000000 ] || fail "less than 2 GB free in /tmp"
-! pgrep -x dragonradio >/dev/null || fail "a dragonradio process is already running"
+if pgrep -x dragonradio >/dev/null; then
+    pgrep -a -x dragonradio | sed 's/^/running: /'
+    fail "a dragonradio process is already running"
+fi
 
 # The workspace is built against the image's UHD: probe with the image's tool.
 probe=/usr/local/bin/uhd_usrp_probe
