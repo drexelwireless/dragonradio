@@ -9,6 +9,7 @@ set(FULLSTACK_TESTS
   test_native_ofdm
   test_native_ofdma
   test_native_perf
+  test_native_phase
   test_native_qam
   test_net_queue
   test_ofdma_batch
