@@ -71,6 +71,12 @@ is fast, Wi-Fi-style CSMA, which host-based SDR timing limits.
      - 3–6 months
      - Medium
      - High
+   * - Simulation notebooks for students
+     - Harness, scenarios and class companion notebooks exist. No DragonRadio
+       notebook has been built or tried.
+     - 6–8 weeks for the first five
+     - High
+     - Low
    * - Microsecond CSMA/CA with RTS/CTS
      - Needs FPGA work. Not recommended.
      - 6+ months
@@ -134,13 +140,18 @@ Constraints that shape the plan
 5 ms. A 1048-byte native frame at 1 MHz lasts about 8 ms. CSMA beats ALOHA only
 when the sensing delay is much shorter than a frame, and here the ratio is
 about 0.6. The true minimum delay of the host path has not been measured, and
-it is the first number work package 4 needs. Three ways to improve the ratio
+it is the first number work package 6 needs. Three ways to improve the ratio
 are longer aggregated frames, narrower bandwidth and a tuned host path. An
 FPGA detector would change the picture but is a different scale of project.
 
-**Simulator.** A keyword search of ``scripts/sim-air.py`` finds no collision
-or interference model; this has not been confirmed by reading it closely. MAC
-work needs one, or every result depends on grid time.
+**Simulator.** The simulated device already models overlap. Each receiver in
+``src/sim/SimUSRP.cc`` adds every overlapping burst to its sample stream, with
+per-link gain, carrier offset, delay, sample clock offset and noise, so
+collisions and capture happen physically, and per-link gains should be enough
+to set up hidden terminals. ``scripts/sim-air.py`` is only the relay between
+nodes. What is missing from the device is multipath, phase noise and an
+interferer source; those exist only in test code. Simulation runs in real time
+on the host clock, which matters for sweeps and for shared classroom machines.
 
 **Validation.** Simulation passed while the grid57 links failed over the air.
 The cause turned out to be native's FFT window timing, exposed by fractional
@@ -172,36 +183,100 @@ depend on earlier ones.
    and liquid are compared over strong and weak links with enough trials to
    state confidence.
 
-2. **Interference in the simulator** (3–6 weeks). Add overlapping
-   transmissions, power-dependent capture and a topology with hidden nodes to
-   the simulated device. *Done when:* simulated ALOHA throughput matches the
-   analytic curve across offered load, and one collision scenario is checked
-   against an OTA run.
+2. **Simulator realism** (1–2 weeks). Add multipath, phase noise and an
+   interferer source to the simulated device. *Done when:* simulated ALOHA
+   throughput matches the analytic curve across offered load, one collision
+   scenario is checked against an OTA run, and a fractional-delay case
+   reproduces the grid57 failure in the full stack.
 
-3. **ALOHA and FDMA with native PHYs** (2–4 weeks). Run both MACs over the air
-   with native OFDM and liquid. Check guard bands against the measured carrier
-   offsets of a few hundred hertz. *Done when:* throughput against offered
-   load is measured for both MACs against TDMA on the same links.
+3. **Notebook foundation** (2–3 weeks, then 3–5 days per notebook). See
+   `Simulation notebooks`_. *Done when:* the first notebook runs from a clean
+   class image, live and headless.
 
-4. **Spectrum sensing** (3–5 weeks). Add a live PSD and per-channel occupancy
+4. **ALOHA and FDMA with native PHYs** (2–4 weeks). Add simulation scenarios
+   and run both MACs over the air with native OFDM and liquid. Check guard
+   bands against the measured carrier offsets of a few hundred hertz. *Done
+   when:* throughput against offered load is measured for both MACs against
+   TDMA on the same links.
+
+5. **Spectrum sensing** (3–5 weeks). Add a live PSD and per-channel occupancy
    from the receive stream, logged and available in Python. Measure detection
    probability against false alarm rate. Decide how to sense while
    transmitting; TDMA guard gaps are the simple answer. *Done when:* a Python
    controller can read occupancy, and detection performance is measured
    against a known signal.
 
-5. **Listen-before-talk CSMA** (4–8 weeks). Measure the host sensing delay
+6. **Listen-before-talk CSMA** (4–8 weeks). Measure the host sensing delay
    first. Add a MAC with energy-based sensing and random backoff. Sweep the
    ratio of sensing delay to frame length. *Done when:* measured throughput
    follows the theoretical trend across that sweep, whether or not it beats
    ALOHA at every setting.
 
-6. **Dynamic spectrum access** (2–3 months). A Python controller picks
+7. **Dynamic spectrum access** (2–3 months). A Python controller picks
    channels from sensing data and coordinates over a control channel, reusing
    the SC2 code where it still fits. *Done when:* a link moves away from an
    interferer and recovers, with the recovery time measured.
 
-7. **Research tracks** (1–3 months each, chosen after package 4). See below.
+8. **Research tracks** (1–3 months each, chosen after package 5). See below.
+
+Simulation notebooks
+--------------------
+
+The goal is for students to learn each technique in simulation before using
+the radios over the air. The simulator runs the production MAC, ARQ and PHY
+code with only the radio device simulated, so students use real DragonRadio,
+not a teaching model. The notebooks extend the class's existing companion
+notebooks (``sdr-lab-class``).
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * - Notebook
+     - Status today
+     - Work needed
+   * - OFDM PHY: EVM, BER, impairments, native against liquid
+     - Mostly ready
+     - Multipath and phase noise for the full lesson (package 2)
+   * - TDMA, ARQ, queues, rate adaptation
+     - Scenarios exist
+     - Notebook only
+   * - OFDMA with strong and weak users
+     - Scenarios exist
+     - Notebook only
+   * - ALOHA, FDMA
+     - MACs exist, no scenarios
+     - Days each, assuming they work with native
+   * - Spectrum sensing
+     - Can start offline in NumPy on recorded IQ
+     - Live version needs package 5
+   * - CSMA
+     - Needs the new MAC
+     - Package 6
+   * - Dynamic spectrum access
+     - Needs sensing and the controller
+     - Package 7
+
+**Design.** Each notebook launches the existing harness
+(``scripts/sim-fullstack.py``), then plots its summaries and logs. A small
+shared helper library handles running, caching and plotting. Importing
+DragonRadio into a Jupyter kernel directly has not been verified, so the design
+does not depend on it.
+
+**Constraints.**
+
+* Runs happen in real time, about 30–60 s each, so a 10-point sweep takes 5–10
+  minutes. Students run one case live and load precomputed results for sweeps.
+* Real-time runs need dedicated CPU. Thirty students on one server could fail
+  in confusing ways. Use per-student containers on grid nodes, or measure
+  server capacity first.
+* The harness runs on Linux, so notebooks run inside the class image. Whether
+  Jupyter is installed in that image needs confirming.
+
+**Simulation and over the air together.** The same scenario definition should
+run in both, so students compare the two directly. The grid57 failure is a
+ready-made example: it passed simulation and failed on real radios. Notebooks
+can also run headless as regression tests.
 
 Research directions
 -------------------
@@ -210,7 +285,7 @@ These depend on owning the PHY, which liquid makes hard.
 
 * **Sensing-driven OFDMA.** Blank individual tones around interference and
   schedule users around it at millisecond timescales. This is the strongest
-  candidate because it joins packages 4 and 6 to work already in the tree.
+  candidate because it joins packages 5 and 7 to work already in the tree.
 * **Hybrid ARQ** using native's soft decoder output.
 * **OFDMA schedulers** such as proportional fair across strong and weak users.
 * **Uplink OFDMA**, the largest and riskiest of these, because of alignment
@@ -218,6 +293,8 @@ These depend on owning the PHY, which liquid makes hard.
 
 Teaching labs
 -------------
+
+Each lab starts in a simulation notebook and then moves over the air.
 
 * ALOHA throughput against offered load, measured on real radios against the
   analytic curve.
@@ -243,5 +320,7 @@ Open items
   match grid59 and grid62.
 * Whether the grid59 X310 needs a power cycle.
 * The true minimum sensing delay of the host path, on N210 and X310.
-* Whether ``scripts/sim-air.py`` has any interference model at all.
+* Whether the ALOHA and FDMA MACs work with the native PHYs in simulation.
+* Whether Jupyter is in the class image, and how many simultaneous real-time
+  runs a classroom server can hold.
 * Native's throughput limit at wider bandwidths on the X310s.
