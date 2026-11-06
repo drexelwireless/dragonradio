@@ -89,7 +89,10 @@ enum : int { RX_INVALID = -1, RX_NO_ACQUISITION = -2, RX_SPECTRAL_NULL = -3, RX_
              RX_HEADER_REJECT = -6 };
 
 struct FastPHY {
-    int n, cp, ns, length, frame;
+    // backoff: the FFT window starts this many samples inside the CP, as liquid's
+    // does, so energy ahead of the detected start stays in the window and the
+    // next symbol stays out of it.
+    int n, cp, backoff, ns, length, frame;
     int bps, chase;
     float scale, template_energy = 0;
     // Detection/timing parameters (fixed; recorded in the docs).
@@ -117,7 +120,7 @@ struct FastPHY {
     FastPHY(int n_, int cp_, int ns_, int nu, const int *ids, const int *nd, const int *db,
             const int *np, const int *pb, const C *tr, const unsigned char *prbs,
             int bits_per_symbol = 2, int chase_bits = 4)
-      : n(n_), cp(cp_), ns(ns_), length(n + cp), frame((ns + 2) * length),
+      : n(n_), cp(cp_), backoff(std::min(2, cp_ / 2)), ns(ns_), length(n + cp), frame((ns + 2) * length),
         bps(bits_per_symbol), chase(chase_bits), scale(1.f / std::sqrt(n)), fine_window(cp_ + 16),
         training(tr, tr + n), fd(n), td(n), corrected(frame), estimate(n), inverse(n) {
         std::lock_guard<std::mutex> planning(planner_mutex);
@@ -439,7 +442,7 @@ struct FastPHY {
         }
         std::fill(estimate.begin(), estimate.end(), C{});
         for (int s = 0; s < 2; ++s) {
-            std::copy(corrected.begin() + s * L + cp, corrected.begin() + (s + 1) * L, td.begin());
+            std::copy(corrected.begin() + s * L + cp - backoff, corrected.begin() + (s + 1) * L - backoff, td.begin());
             fftwf_execute(forward);
             for (int k = 0; k < n; ++k)
                 if (cnorm(training[k]) > 0) estimate[k] += cmulc(fd[k], training[k]) * (0.5f * scale);
@@ -481,7 +484,7 @@ struct FastPHY {
     // raw common pilot phase of that symbol.
     double symbol(const User &a, int s, C *row) {
         const int L = length;
-        std::copy(corrected.begin() + (s + 2) * L + cp, corrected.begin() + (s + 3) * L, td.begin());
+        std::copy(corrected.begin() + (s + 2) * L + cp - backoff, corrected.begin() + (s + 3) * L - backoff, td.begin());
         fftwf_execute(forward);
         C common{};
         for (size_t j = 0; j < a.pilots.size(); ++j) {

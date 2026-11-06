@@ -531,6 +531,10 @@ private:
         // Least-squares projection onto CP-limited FIR responses of order
         // 1, 2, 4, 8 and cp+1 (BIC chooses per frame). Requires a small
         // pseudo-inverse per order, computed here by normal equations.
+        // The FFT window sits core->backoff samples early, so a path arriving
+        // at the detected start has lag backoff and energy ahead of that start
+        // (a precursor) has a smaller lag: each response is centred there, and
+        // is not limited to the causal side of the detected start.
         std::vector<int> active(active_sorted);
         std::sort(active.begin(), active.end());   // FFT-index order, as in the Python wrapper
         const int count = int(active.size()), maximum = std::min(cp + 1, count);
@@ -538,10 +542,11 @@ private:
         for (int o : {1, 2, 4, 8, maximum}) { o = std::min(o, maximum); if (std::find(orders.begin(), orders.end(), o) == orders.end()) orders.push_back(o); }
         std::sort(orders.begin(), orders.end());
         for (int order : orders) {
+            const int first = std::max(0, core->backoff - order / 2);
             std::vector<std::complex<double>> B(size_t(count) * order);
             for (int j = 0; j < count; ++j)
                 for (int t = 0; t < order; ++t)
-                    B[size_t(j) * order + t] = std::polar(1.0, -2 * std::acos(-1.0) * active[j] * t / n);
+                    B[size_t(j) * order + t] = std::polar(1.0, -2 * std::acos(-1.0) * active[j] * (first + t) / n);
             // G = B^H B (order x order), solve G X = B^H for the pseudo-inverse.
             std::vector<std::complex<double>> G(size_t(order) * order), X(size_t(order) * count);
             for (int r = 0; r < order; ++r)

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <functional>
 #include <random>
 #include <vector>
@@ -86,6 +87,37 @@ static Phase sinusoid(double rad, double hz)
     return [=](size_t k) { return rad*std::sin(2*M_PI*hz*k/kFs); };
 }
 
+// Fractional delay d (samples) as a windowed sinc, centred on lag 0.
+static std::vector<float> fracDelay(double d)
+{
+    std::vector<float> h(33);
+
+    for (int i = 0; i < 33; ++i) {
+        const double t = i - 16 - d;
+        const double w = 0.5*(1 + std::cos(M_PI*(i - 16)/17.0));
+
+        h[i] = static_cast<float>((t == 0 ? 1.0 : std::sin(M_PI*t)/(M_PI*t))*w);
+    }
+    return h;
+}
+
+// y[k] = sum h[i] x[k - i + centre]
+static std::vector<fc32> filter(const std::vector<fc32> &x, const std::vector<float> &h, int centre)
+{
+    std::vector<fc32> y(x.size());
+
+    for (size_t k = 0; k < x.size(); ++k)
+        for (size_t i = 0; i < h.size(); ++i) {
+            const long j = static_cast<long>(k) - static_cast<long>(i) + centre;
+
+            if (j >= 0 && j < static_cast<long>(x.size()))
+                y[k] += h[i]*x[j];
+        }
+    return y;
+}
+
+static double median_evm = 0;
+
 static unsigned delivered(PHY &phy, const std::vector<fc32> &clean, double snr_db, const Phase &phase, unsigned seed)
 {
     std::vector<fc32> iq = clean;
@@ -107,8 +139,11 @@ static unsigned delivered(PHY &phy, const std::vector<fc32> &clean, double snr_d
 
     unsigned ok = 0;
     auto     demod = phy.mkPacketDemodulator(0, Channel(0, 1e6));
+    std::vector<float> evms;
 
     demod->setCallback([&](std::shared_ptr<RadioPacket> &&p) {
+        if (!p->internal_flags.invalid_header)
+            evms.push_back(p->evm);
         if (!p->internal_flags.invalid_payload && !p->internal_flags.invalid_header)
             ++ok;
     });
@@ -116,7 +151,43 @@ static unsigned delivered(PHY &phy, const std::vector<fc32> &clean, double snr_d
     demod->timestamp(MonoClock::time_point{MonoClock::duration(100.0)}, std::nullopt, 0, 0, 1.0f, 1e6f);
     for (size_t i = 0; i < iq.size(); i += 4096)
         demod->demodulate(iq.data() + i, std::min<size_t>(4096, iq.size() - i));
+    demod.reset();
+    std::sort(evms.begin(), evms.end());
+    median_evm = evms.empty() ? 0.0 : evms[evms.size()/2];
     return ok;
+}
+
+// Timing and channel shape: every link's frames arrive at some fractional
+// sample offset, and a receiver filter can put energy ahead of the strongest
+// path, as at grid57 (2026-11-06: taps 0.78, 1 at lags -1, 0, a 9 dB droop to
+// the band edge). The FFT window and channel model must hold both.
+static void timing(NativeOFDM &native, liquid::OFDM &legacy)
+{
+    const auto clean_n = frames(native, 1048), clean_l = frames(legacy, 1048);
+    const Phase none = [](size_t) { return 0.0; };
+
+    std::printf("\n1048-byte frames, SNR 30 dB: native delivered / EVM, liquid delivered\n");
+    for (double d : {0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875}) {
+        auto           h = fracDelay(d);
+        const unsigned n = delivered(native, filter(clean_n, h, 16), 30, none, 3);
+        const double   evm = median_evm;
+        const unsigned l = delivered(legacy, filter(clean_l, h, 16), 30, none, 3);
+
+        std::printf("  delay %.3f samples         native %3u %6.1f dB  liquid %3u\n", d, n, evm, l);
+        CHECK(n == kFrames, "native at fractional delay %.3f: %u of %u", d, n, kFrames);
+        CHECK(evm < -17, "native EVM at fractional delay %.3f: %.1f dB", d, evm);
+    }
+    for (const auto &[name, h, centre] : {std::tuple<const char *, std::vector<float>, int>{"early tap, -2.2 dB", {0.78f, 1.0f}, 1},
+                                          {"late tap, -2.2 dB", {1.0f, 0.78f}, 0},
+                                          {"equal taps", {1.0f, 1.0f}, 1},
+                                          {"taps -2,-1,0,1,2 of grid57", {0.18f, 0.78f, 1.0f, 0.17f, 0.15f}, 2}}) {
+        const unsigned n = delivered(native, filter(clean_n, h, centre), 30, none, 3);
+        const double   evm = median_evm;
+        const unsigned l = delivered(legacy, filter(clean_l, h, centre), 30, none, 3);
+
+        std::printf("  %-28s native %3u %6.1f dB  liquid %3u\n", name, n, evm, l);
+        CHECK(n == kFrames, "native with %s: %u of %u", name, n, kFrames);
+    }
 }
 
 int main()
@@ -133,6 +204,8 @@ int main()
     NativeOFDM   native(table, 48, 6, std::nullopt, 4096, 4, true, "v29");
     liquid::OFDM legacy(header, table, false, true, 48, 6, 4, std::nullopt);
 
+    timing(native, legacy);
+
     struct Case { const char *name; std::function<Phase(unsigned)> make; };
     std::vector<Case> cases = {{"none", [](unsigned) { return Phase([](size_t) { return 0.0; }); }}};
 
@@ -144,6 +217,12 @@ int main()
     for (auto [rad, hz] : tones)
         cases.push_back({nullptr, [rad = rad, hz = hz](unsigned) { return sinusoid(rad, hz); }});
 
+    // A steady carrier offset of either sign, as between two free-running radios.
+    const std::vector<double> offsets = {-2000, -800, -400, -300, -200, -100, 100, 200, 300, 400, 800, 2000};
+
+    for (double hz : offsets)
+        cases.push_back({nullptr, [hz](unsigned) { return Phase([hz](size_t k) { return 2*M_PI*hz*k/kFs; }); }});
+
     auto label = [&](size_t i) -> std::string {
         char b[64];
 
@@ -152,8 +231,10 @@ int main()
         if (i < 7) {
             const double lw[] = {3, 10, 30, 100, 300, 1000};
             std::snprintf(b, sizeof b, "wiener %.0f Hz", lw[i - 1]);
-        } else
+        } else if (i < 7 + tones.size())
             std::snprintf(b, sizeof b, "sine %.1f rad %.0f Hz", tones[i - 7].first, tones[i - 7].second);
+        else
+            std::snprintf(b, sizeof b, "carrier offset %+.0f Hz", offsets[i - 7 - tones.size()]);
         return b;
     };
 
