@@ -17,8 +17,10 @@
 # Ported from codex/ofdma-simulation (where it drove dragonradio.radio.Radio).
 import asyncio
 import ctypes
+import faulthandler
 import json
 import logging
+import signal
 import sys
 import time
 
@@ -402,6 +404,10 @@ def main():
 
     if config.log_directory:
         config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events', 'log_arq_events']
+
+    # SIGUSR2 dumps every Python thread's stack to stderr, even if the event loop
+    # is stuck in a C++ call holding the GIL (diagnostics of hardware runs).
+    faulthandler.register(signal.SIGUSR2, all_threads=True)
 
     radio = Radio(config, config.mac)
 
