@@ -409,12 +409,17 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
         bool empty_slot = false;
 
         if (!push(std::move(mpkt), &full_slot, &empty_slot)) {
-            if (!mpkt->partners.empty() && (empty_slot || (max_samples_ && mpkt->nsamples >= *max_samples_))) {
-                // A burst that cannot fit in a slot (it did not fit in an
-                // empty one): a two-user burst is longer than either packet
-                // alone (each user gets part of the tones), so send the
-                // packets separately. max_samples_ alone does not catch
-                // this: a one-slot schedule leaves it unset.
+            if (!mpkt->partners.empty()) {
+                // A two-user burst that does not fit is split, whether it is
+                // too long for any slot or only for what is left of this one:
+                // a burst is about twice as long as one packet (each user
+                // gets part of the tones), so the rest of a slot often holds
+                // one packet but not a burst. Try the first packet alone in
+                // this slot, and hold its partner for the next burst. Carrying
+                // both to the next slot left about a third of most slots
+                // empty (2026-11-06 OTA: 404 of 444 slots). If the packet
+                // alone does not fit either, push records the full slot and
+                // it waits for the next one.
                 pkt = std::move(mpkt->pkt);
                 for (auto p = mpkt->partners.rbegin(); p != mpkt->partners.rend(); ++p)
                     held.push_front(std::move(*p));
@@ -424,11 +429,8 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
                 logPHY(LOGWARNING, "Modulated packet is larger than slot!");
                 full_slot.reset();
             } else {
-                // A burst that does not fit carries all its packets to the
-                // next slot, first packet first.
+                // A packet that does not fit waits for the next slot.
                 pkt = std::move(mpkt->pkt);
-                for (auto p = mpkt->partners.rbegin(); p != mpkt->partners.rend(); ++p)
-                    held.push_front(std::move(*p));
             }
         }
     }

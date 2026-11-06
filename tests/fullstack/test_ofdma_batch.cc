@@ -16,9 +16,11 @@
 //     partner (bounded by the kick, not by the next packet).
 //  4. Broadcast packets never carry a partner.
 //  5. A two-user burst too long for a slot is split: the packets go out alone.
+//  6. After a burst, what is left of a slot carries one packet alone.
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <set>
 #include <thread>
 
 #include <pybind11/embed.h>
@@ -228,6 +230,56 @@ int main()
         for (size_t i = 0; i < seqs.size(); ++i)
             CHECK(seqs[i] == 400 + i, "packet %zu has seq %u, expected %zu", i, seqs[i], 400 + i);
         synth2->stop();
+    }
+
+    // 6. A slot that holds a two-user burst and one packet, but not two bursts:
+    // after the burst the rest of the slot carries one packet alone and its
+    // partner waits for the next burst. Before, both waited and the rest of the
+    // slot stayed empty.
+    {
+        auto mod = static_cast<PHY&>(*phy).mkPacketModulator();
+        ModPacket one, two;
+
+        mod->modulate(mkPacket(2, 0), 1.0f, one);
+        mod->modulateBurst({mkPacket(2, 0), mkPacket(3, 1)}, 1.0f, two);
+
+        const double slot = (two.nsamples + one.nsamples + 50)/fs;
+        auto         synth3 = std::make_shared<Synth>(std::vector<PHYChannel>{chan}, fs, 1);
+        auto         queue3 = std::make_shared<SimpleQueue<std::shared_ptr<NetPacket>>>(SimpleQueue<std::shared_ptr<NetPacket>>::FIFO);
+
+        synth3->setSchedule(Schedule(Schedule::sched_type{{true}}, std::chrono::duration<double>(slot), std::chrono::duration<double>(0.0)));
+        synth3->sink.connect(queue3, &queue3->out);
+        synth3->setBurstQueue(queue3);
+        synth3->setBurstWait(0.020);
+        for (uint16_t i = 0; i < 9; ++i)
+            queue3->push(mkPacket(i % 2 ? 3 : 2, 600 + i));
+
+        std::set<unsigned>  seqs;
+        std::vector<size_t> per_slot;
+
+        for (int k = 0; k < 8 && seqs.size() < 9; ++k) {
+            TXSlot s = runSlot(*synth3, 0.1);
+            size_t n = 0;
+
+            for (auto &m : s.txrecord.mpkts) {
+                seqs.insert(static_cast<uint16_t>(m->pkt->hdr.seq));
+                ++n;
+                for (auto &p : m->partners) {
+                    seqs.insert(static_cast<uint16_t>(p->hdr.seq));
+                    ++n;
+                }
+            }
+            per_slot.push_back(n);
+        }
+        std::printf("burst and packet per slot:");
+        for (size_t n : per_slot)
+            std::printf(" %zu", n);
+        std::printf("\n");
+        CHECK(per_slot.size() >= 1 && per_slot[0] == 3, "first slot carried %zu packets, expected a burst and one more",
+              per_slot.empty() ? 0 : per_slot[0]);
+        CHECK(per_slot.size() == 3 && seqs.size() == 9, "9 packets took %zu slots, %zu delivered (expected 3 slots)",
+              per_slot.size(), seqs.size());
+        synth3->stop();
     }
 
     std::printf(failures ? "FAILED (%d failures)\n" : "PASSED (0 failures)\n", failures);
