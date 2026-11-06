@@ -145,13 +145,28 @@ void USRP::syncTime(double random_bias, bool use_pps)
             }
         }
 
-        const uhd::time_spec_t last = usrp_->get_time_last_pps();
-        const auto             deadline = steady_clock::now() + 3s;
+        // Selecting the time source can change the last-PPS register at once, at
+        // any point in the second, so a single change is not an edge. Wait for
+        // two changes about a second apart: the second is a real edge.
+        const auto deadline = steady_clock::now() + 6s;
+        auto       wait_change = [&]() {
+            const uhd::time_spec_t last = usrp_->get_time_last_pps();
 
-        while (usrp_->get_time_last_pps() == last) {
-            if (steady_clock::now() > deadline)
-                throw std::runtime_error("syncTime: no PPS edge in 3 s; check the time source and the PPS input");
-            std::this_thread::sleep_for(5ms);
+            while (usrp_->get_time_last_pps() == last) {
+                if (steady_clock::now() > deadline)
+                    throw std::runtime_error("syncTime: no PPS edge; check the time source and the PPS input");
+                std::this_thread::sleep_for(2ms);
+            }
+            return steady_clock::now();
+        };
+
+        for (auto prev = wait_change();;) {
+            const auto t = wait_change();
+            const auto gap = std::chrono::duration<double>(t - prev).count();
+
+            if (gap > 0.9 && gap < 1.1)
+                break;
+            prev = t;
         }
 
         const double host = (get_clock_time() + bias).get_real_secs();
@@ -168,7 +183,10 @@ void USRP::syncTime(double random_bias, bool use_pps)
         const uhd::time_spec_t pps = usrp_->get_time_last_pps();
 
         if (pps.get_full_secs() != static_cast<time_t>(edge) + 2 || pps.get_frac_secs() > 1e-6)
-            throw std::runtime_error("syncTime: the device time did not take at the PPS edge");
+            throw std::runtime_error("syncTime: the device time did not take at the PPS edge: expected "
+                                     + std::to_string(static_cast<long long>(edge) + 2) + ", last PPS "
+                                     + std::to_string(pps.get_real_secs()) + "; host at edge "
+                                     + std::to_string(host));
 
         logUSRP(LOGINFO, "time set at PPS edge to %lld (edge %+.3f s from the host's whole second)",
             static_cast<long long>(edge) + 1, host - edge);
