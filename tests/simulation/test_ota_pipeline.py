@@ -137,7 +137,7 @@ class Pipeline(unittest.TestCase):
         health = {line.split(':')[0]: line for line in ssh.splitlines() if 'ota-node-health.sh' in line}
         self.assertEqual(sorted(health), sorted(hosts))
         for h in hosts:
-            want = "'external'" if h in ('grid08', 'grid19', 'grid01', 'grid15') else "'internal'"
+            want = "'external'" if h in ('grid08', 'grid19', 'grid01', 'grid15', 'grid06', 'grid09', 'grid13', 'grid12') else "'internal'"
             self.assertTrue(health[h].endswith(want), health[h])
         gates = sorted({line.split(':')[0] for line in ssh.splitlines() if 'run-sim-fullstack.sh' in line})
         self.assertEqual(gates, ['grid08', 'grid48'])                     # first N210, first X310
