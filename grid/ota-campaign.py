@@ -81,7 +81,7 @@ def cells(campaign):
     if 'cells' not in campaign:
         if 'nodes' not in campaign:
             raise CampaignError('campaign lacks nodes (or cells)')
-        return [{'name': None, 'nodes': campaign['nodes'], 'strata': {}, 'trial': {}}]
+        return [{'name': None, 'nodes': campaign['nodes'], 'strata': {}, 'trial': {}, 'phys': sorted(campaign['phys'])}]
     if 'nodes' in campaign:
         raise CampaignError('give nodes per cell, not both nodes and cells')
     out, names = [], set()
@@ -92,7 +92,11 @@ def cells(campaign):
         names.add(name)
         if not c.get('nodes'):
             raise CampaignError(f'cell {name}: no nodes')
-        out.append({'name': name, 'nodes': c['nodes'], 'strata': c.get('strata', {}), 'trial': c.get('trial', {})})
+        phys = sorted(c.get('phys', campaign['phys']))
+        if not phys or not set(phys) <= set(campaign['phys']):
+            raise CampaignError(f'cell {name}: phys must be a subset of the campaign\'s')
+        out.append({'name': name, 'nodes': c['nodes'], 'strata': c.get('strata', {}), 'trial': c.get('trial', {}),
+                    'phys': phys})
     return out
 
 
@@ -116,10 +120,10 @@ def trial_order(campaign):
     """[(block, cell index, phy)]: every cell with every PHY once per block,
     in a seeded random order."""
     rng = random.Random(campaign.get('seed', 1))
-    ncells = len(cells(campaign))
+    cs = cells(campaign)
     order = []
     for b in range(1, campaign['blocks'] + 1):
-        runs = [(i, phy) for i in range(ncells) for phy in sorted(campaign['phys'])]
+        runs = [(i, phy) for i, c in enumerate(cs) for phy in c['phys']]
         rng.shuffle(runs)
         order += [(b, i, phy) for i, phy in runs]
     return order

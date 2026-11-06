@@ -124,13 +124,14 @@ class Pipeline(unittest.TestCase):
                         workspace_tar=str(self.tar), results_root=str(self.tmp / 'results'),
                         ssh={'head': 'head.example', 'key': '/dev/null'})
         self.campaign.write_text(json.dumps(campaign))
-        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid57', 'grid62', 'grid59']
+        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid48', 'grid58', 'grid57', 'grid62', 'grid59',
+                 'grid06', 'grid09', 'grid13', 'grid12']
         (self.state / 'nodes').write_text(''.join(f'{h} READY\n' for h in hosts))
         run = self.tmp / 'run-cells'
         p = self.pipeline(run, STOP_BEFORE='5')
         log = (run / 'pipeline.log').read_text()
         self.assertEqual(p.returncode, 0, log + p.stderr)
-        self.assertEqual(len(list((run / 'plans').glob('*.json'))), 36)   # 3 blocks x 6 cells x 2 PHYs
+        self.assertEqual(len(list((run / 'plans').glob('*.json'))), 72)   # 3 blocks x 24 cell/PHY runs
         ssh = (self.state / 'ssh.log').read_text()
         self.assertIn('krd26/dragonradio-class-gr310-20261027-v2 ' + ' '.join(hosts) + ' --name', ssh)
         health = {line.split(':')[0]: line for line in ssh.splitlines() if 'ota-node-health.sh' in line}
@@ -139,7 +140,7 @@ class Pipeline(unittest.TestCase):
             want = "'external'" if h in ('grid08', 'grid19', 'grid01', 'grid15') else "'internal'"
             self.assertTrue(health[h].endswith(want), health[h])
         gates = sorted({line.split(':')[0] for line in ssh.splitlines() if 'run-sim-fullstack.sh' in line})
-        self.assertEqual(gates, ['grid08', 'grid60'])                     # first N210, first X310
+        self.assertEqual(gates, ['grid08', 'grid48'])                     # first N210, first X310
         self.assertNotIn('ota-fullstack.py', ssh)
         self.assertTrue((run / 'stage-6.done').exists())
 
@@ -151,20 +152,21 @@ class Pipeline(unittest.TestCase):
                         workspace_tar=str(self.tar), results_root=str(self.tmp / 'results'),
                         ssh={'head': 'head.example', 'key': '/dev/null'})
         self.campaign.write_text(json.dumps(campaign))
-        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid57', 'grid62', 'grid59']
+        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid48', 'grid58', 'grid57', 'grid62', 'grid59',
+                 'grid06', 'grid09', 'grid13', 'grid12']
         (self.state / 'nodes').write_text(''.join(f'{h} READY\n' for h in hosts))
-        (self.state / 'health-fail-grid60').write_text('')           # in XS only
+        (self.state / 'health-fail-grid48').write_text('')           # in XS2 only
         run = self.tmp / 'run-drop'
         p = self.pipeline(run, STOP_BEFORE='5')
         log = (run / 'pipeline.log').read_text()
         self.assertEqual(p.returncode, 0, log + p.stderr)
-        self.assertIn('health failed on: grid60; their cells are left out: running 30 trials', log)
-        self.assertEqual((run / 'unhealthy').read_text().split(), ['grid60'])
+        self.assertIn('health failed on: grid48; their cells are left out: running 66 trials', log)
+        self.assertEqual((run / 'unhealthy').read_text().split(), ['grid48'])
         gates = sorted({line.split(':')[0] for line in (self.state / 'ssh.log').read_text().splitlines()
                         if 'run-sim-fullstack.sh' in line})
-        self.assertEqual(gates, ['grid08', 'grid61'])                     # first healthy X310
+        self.assertEqual(gates, ['grid08', 'grid58'])                     # first healthy X310
         plans = sorted(p.name for p in (run / 'plans-healthy' / 'plans').glob('*.json'))
-        self.assertFalse(any('-XS-' in n for n in plans))
+        self.assertFalse(any('-XS2-' in n for n in plans))
         self.assertTrue((run / 'stage-6.done').exists())
 
     def test_every_cell_unhealthy_stops(self):
@@ -183,7 +185,8 @@ class Pipeline(unittest.TestCase):
                         workspace=str(self.tmp / 'node' / 'drport'), results_root=str(self.tmp / 'results'),
                         ssh={'head': 'head.example', 'key': '/dev/null'})
         self.campaign.write_text(json.dumps(campaign))
-        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid57', 'grid62', 'grid59']
+        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid48', 'grid58', 'grid57', 'grid62', 'grid59',
+                 'grid06', 'grid09', 'grid13', 'grid12']
         (self.state / 'nodes').write_text(''.join(f'{h} READY\n' for h in hosts))
         run = self.tmp / 'run-image'
         p = self.pipeline(run, STOP_BEFORE='5')
@@ -264,16 +267,25 @@ class Campaign(unittest.TestCase):
     def test_cells(self):
         c = self.cells_campaign()
         plans = self.mod.plans(c, '/tmp/run', '777')
-        self.assertEqual(len(plans), 36)
+        self.assertEqual(len(plans), 72)
         ids = [p['trial_id'] for p in plans]
-        self.assertEqual(len(set(ids)), 36)
-        self.assertIn('pps-mixed01-b01-XS-ofdm', ids)
+        self.assertEqual(len(set(ids)), 72)
+        self.assertIn('ota02-b01-XS2-ofdm', ids)
+        self.assertIn('ota02-b01-OS-native-ofdma', ids)
         for b in (1, 2, 3):
             runs = sorted((p['strata']['cell'], p['phy']) for p in plans if p['strata']['pair_block'] == b)
-            self.assertEqual(runs, sorted((cell, phy) for cell in ('S1', 'W1', 'XS', 'XW2', 'NXS', 'NXW')
-                                          for phy in ('native-ofdm', 'ofdm')))
-        xs = next(p for p in plans if p['strata']['cell'] == 'XS')
-        self.assertEqual([n['host'] for n in xs['nodes']], ['grid60', 'grid61'])
+            want = [(cell, phy) for cell in ('S1', 'W1', 'XS2', 'XW2', 'NXS2', 'NXW') for phy in ('native-ofdm', 'ofdm')]
+            want += [(cell, phy) for cell in ('OS', 'OW', 'OX') for phy in ('native-ofdm', 'native-ofdma', 'ofdm')]
+            want += [('OI', 'native-ofdm'), ('OI', 'native-ofdma'), ('OU', 'native-ofdma')]
+            self.assertEqual(runs, sorted(want))
+        xs = next(p for p in plans if p['strata']['cell'] == 'XS2')
+        self.assertEqual([n['host'] for n in xs['nodes']], ['grid48', 'grid58'])
+        self.assertEqual(xs['min_udp_delivery'], 0.95)
+        os_ = next(p for p in plans if p['strata']['cell'] == 'OS' and p['phy'] == 'native-ofdma')
+        self.assertEqual(len(os_['nodes']), 3)
+        self.assertEqual(os_['min_udp_delivery'], 0.0)
+        self.assertEqual([t['pps'] for t in os_['traffic']], [75, 75])
+        self.assertIn('--taildrop', os_['nodes'][0]['radio_args'])
         self.assertEqual(xs['strata']['pair_type'], 'X310<->X310')
         self.assertEqual(xs['nodes'][0]['addr'], 'addr=192.168.40.2')
         self.assertEqual(xs['strata']['carrier_map'], 'single channel')
@@ -281,13 +293,14 @@ class Campaign(unittest.TestCase):
             self.mod.ota.build(p)                    # every plan validates
         hosts = self.mod.hosts(c)
         self.assertEqual([h[0] for h in hosts],
-                         ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid57', 'grid62', 'grid59'])
+                         ['grid08', 'grid19', 'grid01', 'grid15', 'grid48', 'grid58', 'grid57', 'grid62', 'grid59',
+                 'grid06', 'grid09', 'grid13', 'grid12'])
         self.assertEqual(dict((h, clk) for h, _, clk, _ in hosts)['grid01'], 'external')   # external in W1
-        self.assertEqual(dict((h, clk) for h, _, clk, _ in hosts)['grid61'], 'internal')
+        self.assertEqual(dict((h, clk) for h, _, clk, _ in hosts)['grid59'], 'internal')
 
     def test_cells_reject_conflicts(self):
         c = self.cells_campaign()
-        c['cells'][4]['nodes'][0]['addr'] = 'addr=192.168.10.3'           # grid01 elsewhere 192.168.10.2
+        c['cells'][4]['nodes'][0]['addr'] = 'addr=192.168.10.3'           # grid01, 192.168.10.2 in W1
         with self.assertRaises(self.mod.CampaignError):
             self.mod.plans(c, '/tmp/run', '777')
         c = self.cells_campaign()

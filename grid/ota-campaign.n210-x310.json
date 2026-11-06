@@ -1,5 +1,5 @@
 {
- "campaign_id": "pps-mixed01",
+ "campaign_id": "ota02",
  "rf_approval_reference": "NOT-APPROVED-rehearsal-only",
  "rf_approval_covers": [
   "forward data",
@@ -7,13 +7,13 @@
   "timesync HELLO broadcasts"
  ],
  "image": "krd26/dragonradio-class-gr310-20261027-v2",
- "reservation_duration": "4h",
+ "reservation_duration": "6h",
  "workspace": "/tmp/drport",
  "workspace_tar": "/home/krd26/dragonradio-ota/ws-REPLACE.tar.gz",
  "workspace_commit": "REPLACE_WITH_THE_40_CHARACTER_COMMIT",
  "results_root": "/home/krd26/dragonradio-ota/results",
  "node_local_root": "/tmp/drfs",
- "frequency": 1300000000,
+ "frequency": 1322000000,
  "bandwidth": 1000000,
  "max_tx_gain": 20,
  "cells": [
@@ -46,8 +46,12 @@
     "strength": "strong",
     "placement": "grid08-grid19 (radio map 2026-10-25: tone SNR 102.2 dB weaker direction)",
     "power": "TX 10/10 dB, RX 20/20 dB",
-    "clock": "shared 10 MHz + PPS (OctoClock)"
-   }
+    "clock": "shared 10 MHz + PPS (OctoClock), time set at a PPS edge"
+   },
+   "phys": [
+    "native-ofdm",
+    "ofdm"
+   ]
   },
   {
    "name": "W1",
@@ -78,15 +82,19 @@
     "strength": "weak",
     "placement": "grid01-grid15 (radio map 2026-10-25: tone SNR 77.6 dB weaker direction)",
     "power": "TX 10/10 dB, RX 20/20 dB",
-    "clock": "shared 10 MHz + PPS (OctoClock)"
-   }
+    "clock": "shared 10 MHz + PPS (OctoClock), time set at a PPS edge"
+   },
+   "phys": [
+    "native-ofdm",
+    "ofdm"
+   ]
   },
   {
-   "name": "XS",
+   "name": "XS2",
    "nodes": [
     {
      "id": 1,
-     "host": "grid60",
+     "host": "grid48",
      "family": "X310",
      "addr": "addr=192.168.40.2",
      "tx_gain": 5,
@@ -95,7 +103,7 @@
     },
     {
      "id": 2,
-     "host": "grid61",
+     "host": "grid58",
      "family": "X310",
      "addr": "addr=192.168.40.2",
      "tx_gain": 5,
@@ -106,10 +114,14 @@
    "strata": {
     "pair_type": "X310<->X310",
     "strength": "strong",
-    "placement": "grid60-grid61 (radio map 2026-10-25: tone SNR 90.0 dB at TX/RX 5 dB)",
+    "placement": "grid48-grid58 (radio map 2026-10-25: tone SNR 83.0 dB at TX/RX 5 dB; replaces grid60-grid61: grid61 X310 hung 2026-11-05)",
     "power": "TX 5/5 dB, RX 10/10 dB",
     "clock": "independent oscillators, timesync only"
-   }
+   },
+   "phys": [
+    "native-ofdm",
+    "ofdm"
+   ]
   },
   {
    "name": "XW2",
@@ -139,10 +151,14 @@
     "placement": "grid57-grid62 (radio map 2026-10-25: tone SNR 71.3 dB at TX/RX 5 dB; replaces grid44-grid57: grid44 X310 not openable 2026-11-05)",
     "power": "TX 5/5 dB, RX 10/10 dB",
     "clock": "independent oscillators, timesync only"
-   }
+   },
+   "phys": [
+    "native-ofdm",
+    "ofdm"
+   ]
   },
   {
-   "name": "NXS",
+   "name": "NXS2",
    "nodes": [
     {
      "id": 1,
@@ -155,7 +171,7 @@
     },
     {
      "id": 2,
-     "host": "grid61",
+     "host": "grid59",
      "family": "X310",
      "addr": "addr=192.168.40.2",
      "tx_gain": 5,
@@ -166,10 +182,14 @@
    "strata": {
     "pair_type": "N210<->X310",
     "strength": "strong",
-    "placement": "grid01-grid61 (radio map 2026-10-25: tone SNR 81.7 dB weaker direction)",
+    "placement": "grid01-grid59 (radio map 2026-10-25: tone SNR 78.8 dB weaker direction; replaces grid01-grid61)",
     "power": "TX 10/5 dB, RX 20/10 dB",
     "clock": "independent oscillators, timesync only"
-   }
+   },
+   "phys": [
+    "native-ofdm",
+    "ofdm"
+   ]
   },
   {
    "name": "NXW",
@@ -199,6 +219,417 @@
     "placement": "grid15-grid59 (radio map 2026-10-25: tone SNR 66.0 dB weaker direction)",
     "power": "TX 10/5 dB, RX 20/10 dB",
     "clock": "independent oscillators, timesync only"
+   },
+   "phys": [
+    "native-ofdm",
+    "ofdm"
+   ]
+  },
+  {
+   "name": "OS",
+   "phys": [
+    "native-ofdm",
+    "native-ofdma",
+    "ofdm"
+   ],
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid08",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    },
+    {
+     "id": 2,
+     "host": "grid19",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    },
+    {
+     "id": 3,
+     "host": "grid06",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    }
+   ],
+   "strata": {
+    "pair_type": "N210 BS + 2 UEs",
+    "strength": "OFDMA: both UEs strong, saturated downlink (map 102.2, 99.4 dB)",
+    "placement": "grid08-grid19-grid06",
+    "power": "TX 10 dB, RX 20 dB",
+    "clock": "shared 10 MHz + PPS (OctoClock), time set at a PPS edge"
+   },
+   "trial": {
+    "traffic": [
+     {
+      "kind": "udp",
+      "src": 1,
+      "dst": 2,
+      "port": 5002,
+      "pps": 75,
+      "size": 1000
+     },
+     {
+      "kind": "udp",
+      "src": 1,
+      "dst": 3,
+      "port": 5003,
+      "pps": 75,
+      "size": 1000
+     }
+    ],
+    "min_udp_delivery": 0.0
+   }
+  },
+  {
+   "name": "OW",
+   "phys": [
+    "native-ofdm",
+    "native-ofdma",
+    "ofdm"
+   ],
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid09",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    },
+    {
+     "id": 2,
+     "host": "grid13",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    },
+    {
+     "id": 3,
+     "host": "grid12",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    }
+   ],
+   "strata": {
+    "pair_type": "N210 BS + 2 UEs",
+    "strength": "OFDMA: one strong, one weak UE, saturated downlink (map 100.2, 81.4 dB)",
+    "placement": "grid09-grid13-grid12",
+    "power": "TX 10 dB, RX 20 dB",
+    "clock": "shared 10 MHz + PPS (OctoClock), time set at a PPS edge"
+   },
+   "trial": {
+    "traffic": [
+     {
+      "kind": "udp",
+      "src": 1,
+      "dst": 2,
+      "port": 5002,
+      "pps": 75,
+      "size": 1000
+     },
+     {
+      "kind": "udp",
+      "src": 1,
+      "dst": 3,
+      "port": 5003,
+      "pps": 75,
+      "size": 1000
+     }
+    ],
+    "min_udp_delivery": 0.0
+   }
+  },
+  {
+   "name": "OX",
+   "phys": [
+    "native-ofdm",
+    "native-ofdma",
+    "ofdm"
+   ],
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid57",
+     "family": "X310",
+     "addr": "addr=192.168.40.2",
+     "tx_gain": 5,
+     "rx_gain": 10,
+     "clock_source": "internal",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    },
+    {
+     "id": 2,
+     "host": "grid59",
+     "family": "X310",
+     "addr": "addr=192.168.40.2",
+     "tx_gain": 5,
+     "rx_gain": 10,
+     "clock_source": "internal",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    },
+    {
+     "id": 3,
+     "host": "grid62",
+     "family": "X310",
+     "addr": "addr=192.168.40.2",
+     "tx_gain": 5,
+     "rx_gain": 10,
+     "clock_source": "internal",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    }
+   ],
+   "strata": {
+    "pair_type": "X310 BS + 2 UEs",
+    "strength": "OFDMA on X310s: saturated downlink (map 86.9, 71.3 dB at TX/RX 5 dB)",
+    "placement": "grid57-grid59-grid62",
+    "power": "TX 5 dB, RX 10 dB",
+    "clock": "independent oscillators, timesync only"
+   },
+   "trial": {
+    "traffic": [
+     {
+      "kind": "udp",
+      "src": 1,
+      "dst": 2,
+      "port": 5002,
+      "pps": 75,
+      "size": 1000
+     },
+     {
+      "kind": "udp",
+      "src": 1,
+      "dst": 3,
+      "port": 5003,
+      "pps": 75,
+      "size": 1000
+     }
+    ],
+    "min_udp_delivery": 0.0
+   }
+  },
+  {
+   "name": "OI",
+   "phys": [
+    "native-ofdm",
+    "native-ofdma"
+   ],
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid08",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    },
+    {
+     "id": 2,
+     "host": "grid19",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    },
+    {
+     "id": 3,
+     "host": "grid06",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000"
+     ]
+    }
+   ],
+   "strata": {
+    "pair_type": "N210 BS + 2 UEs",
+    "strength": "OFDMA: one UE idle, all tones to the other",
+    "placement": "grid08-grid19-grid06",
+    "power": "TX 10 dB, RX 20 dB",
+    "clock": "shared 10 MHz + PPS (OctoClock), time set at a PPS edge"
+   },
+   "trial": {
+    "traffic": [
+     {
+      "kind": "udp",
+      "src": 1,
+      "dst": 2,
+      "port": 5002,
+      "pps": 150,
+      "size": 1000
+     }
+    ],
+    "min_udp_delivery": 0.0
+   }
+  },
+  {
+   "name": "OU",
+   "phys": [
+    "native-ofdma"
+   ],
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid08",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000",
+      "--ofdma-allocation",
+      "1:2"
+     ]
+    },
+    {
+     "id": 2,
+     "host": "grid19",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000",
+      "--ofdma-allocation",
+      "1:2"
+     ]
+    },
+    {
+     "id": 3,
+     "host": "grid06",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external",
+     "radio_args": [
+      "--taildrop",
+      "--set",
+      "tail_drop_max_size=15000",
+      "--ofdma-allocation",
+      "1:2"
+     ]
+    }
+   ],
+   "strata": {
+    "pair_type": "N210 BS + 2 UEs",
+    "strength": "OFDMA: 1:2 tone split matching unequal demand",
+    "placement": "grid08-grid19-grid06",
+    "power": "TX 10 dB, RX 20 dB",
+    "clock": "shared 10 MHz + PPS (OctoClock), time set at a PPS edge"
+   },
+   "trial": {
+    "traffic": [
+     {
+      "kind": "udp",
+      "src": 1,
+      "dst": 2,
+      "port": 5002,
+      "pps": 25,
+      "size": 1000
+     },
+     {
+      "kind": "udp",
+      "src": 1,
+      "dst": 3,
+      "port": 5003,
+      "pps": 125,
+      "size": 1000
+     }
+    ],
+    "min_udp_delivery": 0.0
    }
   }
  ],
@@ -209,7 +640,9 @@
    "-k",
    "none",
    "-m",
-   "qpsk"
+   "qpsk",
+   "--auto-soft-tx-gain",
+   "100"
   ],
   "ofdm": [
    "-c",
@@ -217,7 +650,19 @@
    "-k",
    "none",
    "-m",
-   "qpsk"
+   "qpsk",
+   "--auto-soft-tx-gain",
+   "100"
+  ],
+  "native-ofdma": [
+   "-c",
+   "rs8",
+   "-k",
+   "none",
+   "-m",
+   "qpsk",
+   "--auto-soft-tx-gain",
+   "100"
   ]
  },
  "blocks": 3,
@@ -227,7 +672,8 @@
   "duration_s": 60,
   "drain_s": 5,
   "go_timeout_s": 90,
-  "start_lead_s": 20
+  "start_lead_s": 20,
+  "min_udp_delivery": 0.95
  },
  "timesync": {
   "time_master": 1,

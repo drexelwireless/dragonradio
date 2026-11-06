@@ -35,11 +35,36 @@ def _q(values):
     return {'p10': round(float(p10), 3), 'median': round(float(p50), 3), 'p90': round(float(p90), 3), 'n': int(v.size)}
 
 
+def delay_metrics(f, large=0.2):
+    """Network-to-air delay of first transmissions of sequenced data, separating
+    the start of traffic from steady state. settled_s: seconds from the first
+    data packet until this delay stays under `large` seconds."""
+    if 'send' not in f:
+        return None
+    s = f['send'][()]
+    names = s.dtype.names
+    if not {'net_timestamp', 'timestamp', 'nretrans', 'flags', 'data_len'} <= set(names):
+        return None
+    d = s[((s['flags'] & 4) != 0) & (s['nretrans'] == 0) & (s['data_len'] > 0) & (s['net_timestamp'] > 0)]
+    if not len(d):
+        return None
+    t = d['net_timestamp'] - d['net_timestamp'].min()
+    dl = d['timestamp'] - d['net_timestamp']
+    bad = t[dl >= large]
+    settled = float(bad.max()) if len(bad) else 0.0
+    steady = dl[t > settled]
+    return {'packets': int(len(d)), 'settled_s': round(settled, 2), 'max_s': round(float(dl.max()), 3),
+            'steady_p50_ms': round(float(np.median(steady)) * 1e3, 1) if len(steady) else None,
+            'steady_p95_ms': round(float(np.percentile(steady, 95)) * 1e3, 1) if len(steady) else None,
+            'steady_seconds': round(float(t.max() - settled), 1)}
+
+
 def node_metrics(path):
     import h5py  # pylint: disable=import-outside-toplevel
 
     out = {'log': str(path), 'rx': {}, 'tx': {}}
     with h5py.File(path, 'r') as f:
+        out['delay'] = delay_metrics(f)
         if 'recv' in f:
             r = f['recv']
             names = r.dtype.names
