@@ -166,14 +166,23 @@ public:
         if (hiq_.empty() && q_.empty())
             return false;
 
-        MonoClock::time_point now = MonoClock::now();
+        // Read the clock only for a packet that has a deadline: on hardware it is
+        // a network round trip to the radio, and this lock is held meanwhile.
+        std::optional<MonoClock::time_point> now;
+        auto                                 should_drop = [&now](T &p) {
+            if (!p->deadline)
+                return false;
+            if (!now)
+                now = MonoClock::now();
+            return p->shouldDrop(*now);
+        };
 
         // First look in high-priority queue
         {
             auto it = hiq_.begin();
 
             while (it != hiq_.end()) {
-                if ((*it)->shouldDrop(now))
+                if (should_drop(*it))
                     it = hiq_.erase(it);
                 else if (canPop(*it)) {
                     val = std::move(*it);
@@ -189,7 +198,7 @@ public:
             auto it = q_.begin();
 
             while (it != q_.end()) {
-                if ((*it)->shouldDrop(now))
+                if (should_drop(*it))
                     it = q_.erase(it);
                 else if (canPop(*it)) {
                     val = std::move(*it);
@@ -202,7 +211,7 @@ public:
             auto it = q_.rbegin();
 
             while (it != q_.rend()) {
-                if ((*it)->shouldDrop(now)) {
+                if (should_drop(*it)) {
                     it = decltype(it){ q_.erase(std::next(it).base()) };
                 } else if (canPop(*it)) {
                     val = std::move(*it);

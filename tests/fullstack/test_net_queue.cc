@@ -2,8 +2,11 @@
 // hold back sequenced data to that node but never the controller's unsequenced
 // ACK/control packets; otherwise a simultaneous open stalls until the SYN
 // retransmission timer fires and the retransmitted SYN is delivered twice.
+#include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <memory>
 #include <vector>
 
 #include "net/REDQueue.hh"
@@ -11,6 +14,8 @@
 #include "net/SimpleQueue.hh"
 
 static int failures = 0;
+using namespace std::chrono_literals;
+
 #define CHECK(cond, ...) do { if (!(cond)) { ++failures; std::fprintf(stderr, "FAIL %s:%d: ", __FILE__, __LINE__); std::fprintf(stderr, __VA_ARGS__); std::fprintf(stderr, "\n"); } } while (0)
 
 static std::shared_ptr<NetPacket> packet(NodeId nexthop, bool has_seq, bool assigned)
@@ -25,8 +30,47 @@ static std::shared_ptr<NetPacket> packet(NodeId nexthop, bool has_seq, bool assi
     return p;
 }
 
+// Counts clock reads: on hardware MonoClock::now() is a network round trip to the
+// radio, made here with the queue lock held, so a pop must not read the clock
+// unless a packet has a deadline (2026-11-05: a pop retried behind a closed send
+// window starved the queue's lock and froze transmission for seconds).
+struct CountingClock : public MonoClock::TimeKeeper {
+    std::atomic<int> reads{0};
+    MonoClock::time_point now() noexcept override
+    {
+        ++reads;
+        return MonoClock::time_point{std::chrono::steady_clock::now().time_since_epoch()};
+    }
+};
+
 int main()
 {
+    {
+        auto clk = std::make_shared<CountingClock>();
+        SimpleNetQueue q(SimpleNetQueue::FIFO);
+        TailDropNetQueue t(100000);
+        std::shared_ptr<NetPacket> out;
+
+        q.setLinkStatus(2, false);
+        t.setLinkStatus(2, false);
+        q.push(packet(2, true, false));
+        t.push(packet(2, true, false));
+        MonoClock::set_time_keeper(clk);
+        clk->reads = 0;
+        for (int i = 0; i < 100; ++i) {
+            CHECK(!q.pop(out), "held packet popped");
+            CHECK(!t.pop(out), "held packet popped");
+        }
+        CHECK(clk->reads == 0, "queues read the clock %d times with no deadlines", clk->reads.load());
+
+        auto d = packet(3, true, false);         // a deadline still needs the clock
+        d->deadline = MonoClock::time_point{std::chrono::steady_clock::now().time_since_epoch()} + 10s;
+        q.push(std::move(d));
+        CHECK(q.pop(out) && out->hdr.nexthop == 3, "packet with a deadline");
+        CHECK(clk->reads > 0, "clock not read for a packet with a deadline");
+        MonoClock::reset_time_keeper();
+    }
+
     for (auto type : {SimpleNetQueue::FIFO, SimpleNetQueue::LIFO}) {
         SimpleNetQueue q(type);
         std::shared_ptr<NetPacket> out;

@@ -2,6 +2,7 @@
 #define SIZEDQUEUE_HH_
 
 #include <list>
+#include <optional>
 #include <random>
 
 #include "logging.hh"
@@ -148,7 +149,9 @@ public:
         if (hiq_.empty() && q_.empty())
             return false;
 
-        MonoClock::time_point now = MonoClock::now();
+        // Read the clock only for a packet that has a deadline: on hardware it is
+        // a network round trip to the radio, and this lock is held meanwhile.
+        std::optional<MonoClock::time_point> now;
 
         // First look in high-priority queue
         if (pop_queue(hiq_, now, val))
@@ -184,12 +187,19 @@ protected:
     std::list<T> q_;
 
     /** @brief Attempt to pop packet from given queue. */
-    bool pop_queue(std::list<T>& q, const MonoClock::time_point &now, T& val)
+    bool pop_queue(std::list<T>& q, std::optional<MonoClock::time_point> &now, T& val)
     {
+        auto should_drop = [&now](T &p) {
+            if (!p->deadline)
+                return false;
+            if (!now)
+                now = MonoClock::now();
+            return p->shouldDrop(*now);
+        };
         auto it = q.begin();
 
         while (it != q.end()) {
-            if ((*it)->shouldDrop(now)) {
+            if (should_drop(*it)) {
                 size_ -= (*it)->payload_size;
                 drop(*it);
 

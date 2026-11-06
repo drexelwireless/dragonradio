@@ -347,8 +347,15 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
         }
 
         if (!pkt) {
-            if (!sink.pull(pkt))
+            if (!sink.pull(pkt)) {
+                // Packets may be queued that cannot leave yet (send window
+                // closed). Without a pause this loop retakes the queue lock
+                // continuously and starves everything that pushes to it: the
+                // tap reader and control messages (2026-11-05, stalls of
+                // several seconds at traffic start on hardware).
+                std::this_thread::sleep_for(std::chrono::microseconds(500));
                 continue;
+            }
         }
 
         // Downlink OFDMA (PHYs with getMaxBurstUsers() > 1): a second unicast

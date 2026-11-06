@@ -11,6 +11,9 @@
 
 namespace py = pybind11;
 
+#include <chrono>
+#include <thread>
+
 #include "logging.hh"
 #include "phy/MultichannelSynthesizer.hh"
 #include "phy/PHY.hh"
@@ -548,8 +551,12 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 // modulate (if needed), and then create a ModPacket for modulation.
                 if (!mpkt) {
                     if (!pkt) {
-                        if (!sink.pull(pkt))
+                        if (!sink.pull(pkt)) {
+                            // As in ChannelSynthesizer: packets may be queued that
+                            // cannot leave yet; don't spin on the queue lock.
+                            std::this_thread::sleep_for(std::chrono::microseconds(500));
                             continue;
+                        }
                     }
 
                     mpkt = std::make_unique<ModPacket>();
