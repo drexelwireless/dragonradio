@@ -24,6 +24,7 @@ Welcome to DragonRadio's documentation!
    ota-grid
    ota-fullstack-grid
    ota-study-plan
+   development-plan-mac-sensing
    characterization
    container
    colosseum
