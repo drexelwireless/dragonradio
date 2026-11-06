@@ -182,7 +182,10 @@ void USRP::syncTime(double random_bias, bool use_pps)
 
         const uhd::time_spec_t pps = usrp_->get_time_last_pps();
 
-        if (pps.get_full_secs() != static_cast<time_t>(edge) + 2 || pps.get_frac_secs() > 1e-6)
+        // Compared in real seconds: the value can read one 10 ns tick below the
+        // whole second, which shows as full seconds one lower with a fraction
+        // of 0.99999999.
+        if (std::abs(pps.get_real_secs() - (edge + 2.0)) > 1e-3)
             throw std::runtime_error("syncTime: the device time did not take at the PPS edge: expected "
                                      + std::to_string(static_cast<long long>(edge) + 2) + ", last PPS "
                                      + std::to_string(pps.get_real_secs()) + "; host at edge "
