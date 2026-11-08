@@ -156,7 +156,7 @@ struct FramedPHY {
     // or demodulator thread; P4: no allocation per received frame).
     struct Workspace {
         std::vector<C> rows;
-        std::vector<double> phases;
+        std::vector<double> phases, track;
         std::vector<unsigned char> bytes, descrambled, soft;
         std::vector<float> confidence;
     } ws;
@@ -313,6 +313,8 @@ struct FramedPHY {
         for (int s = 0; s < H; ++s) { phases[s] = f.symbol(a, s, rows.data() + s * nd); FastPHY::unwrap(phases, s); }
         double intercept, slope;
         FastPHY::phase_line(phases, H, intercept, slope);
+        std::vector<double> &track = ws.track;
+        FastPHY::phase_track(phases, H, intercept, slope, track);
         const int air_bits = header_air * 8;
         std::vector<unsigned char> &on_air = ws.bytes, &descrambled = ws.descrambled;
         const unsigned char *const prbs = scramble_.data();
@@ -323,7 +325,7 @@ struct FramedPHY {
         double noise = 0;
         int points = 0;
         for (int s = 0; s < H; ++s) {
-            C correction = std::polar(f.scale, float(-(intercept + slope * s)));
+            C correction = std::polar(f.scale, float(-track[s]));
             for (int j = 0; j < nd; ++j) {
                 const int bit = 2 * (s * nd + j);
                 if (bit >= air_bits) break;
@@ -392,6 +394,8 @@ struct FramedPHY {
         for (int s = 0; s < total; ++s) { phases[s] = f.symbol(a, s, rows.data() + s * nd); FastPHY::unwrap(phases, s); }
         double intercept, slope;
         FastPHY::phase_line(phases, total, intercept, slope);
+        std::vector<double> &track = ws.track;
+        FastPHY::phase_track(phases, total, intercept, slope, track);
         metrics[2] += slope * n / (2 * double(PI) * f.length);
         const int used = on_air_bytes(fh.length, fh.fec0, fh.fec1) * 8, header_bits = 2 * H * nd;
         // Soft input only matters to a convolutional outer stage: liquid's
@@ -416,7 +420,7 @@ struct FramedPHY {
         // demodulation 30% slower (P4 finding on 5db6052f).
         auto demap_all = [&](auto demapper, auto &hard, auto &conf) {
             for (int s = H; s < total; ++s) {
-                C correction = std::polar(f.scale, float(-(intercept + slope * s)));
+                C correction = std::polar(f.scale, float(-track[s]));
                 for (int j = 0; j < nd; ++j) {
                     const int bit = bps * ((s - H) * nd + j);
                     const float gain = cnorm(f.estimate[a.data[j]]);

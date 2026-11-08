@@ -508,6 +508,25 @@ struct FastPHY {
         slope = denominator ? (count * sxy - sx * sy) / denominator : 0;
         intercept = (sy - slope * sx) / count;
     }
+    // Phase to remove from each symbol: the line through the pilot phases
+    // plus the pilots' mean deviation from it over +/- phase_window symbols.
+    // The line alone holds a steady residual CFO; the deviation follows
+    // oscillator wander within a long frame, as liquid's per-symbol pilot
+    // tracking does, with less pilot noise than one symbol's pilots alone.
+    static constexpr int phase_window = 2;
+    static void phase_track(const std::vector<double> &phases, int count, double intercept, double slope,
+                            std::vector<double> &track) {
+        track.resize(count);
+        const auto residual = [&](int s) { return phases[s] - (intercept + slope * s); };
+        double sum = 0;
+        for (int s = 0; s < std::min(phase_window, count); ++s) sum += residual(s);
+        for (int s = 0; s < count; ++s) {
+            if (s + phase_window < count) sum += residual(s + phase_window);
+            if (s - phase_window > 0) sum -= residual(s - phase_window - 1);
+            const int lo = std::max(0, s - phase_window), hi = std::min(count - 1, s + phase_window);
+            track[s] = intercept + slope * s + sum / (hi - lo + 1);
+        }
+    }
     // Hard bits and max-log reliabilities for one equalized point.
     static float demap(C z, float gain, int bits_per_symbol, int *hard, float *confidence) {
         if (bits_per_symbol == 2) {
@@ -571,8 +590,10 @@ struct FastPHY {
         double intercept, slope;
         phase_line(phases, ns, intercept, slope);
         metrics[2] += slope * n / (2 * double(PI) * length);
+        std::vector<double> track;
+        phase_track(phases, ns, intercept, slope, track);
         for (int s = 0; s < ns; ++s) {
-            C correction = std::polar(scale, float(-(intercept + slope * s)));
+            C correction = std::polar(scale, float(-track[s]));
             for (int j = 0; j < nd; ++j) {
                 C z = cmul(recovered[s * nd + j], correction);
                 int bit = bps * (s * nd + j);

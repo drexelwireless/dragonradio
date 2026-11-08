@@ -85,7 +85,7 @@ struct FramedOFDMA {
     std::array<std::vector<unsigned char>, kMaxUsers> scramble;
     struct Workspace {
         std::vector<C> rows;
-        std::vector<double> phases;
+        std::vector<double> phases, track;
         std::vector<unsigned char> bytes, descrambled, soft;
         std::vector<float> confidence;
     } ws;
@@ -227,13 +227,14 @@ struct FramedOFDMA {
         for (int s = 0; s < H; ++s) { ws.phases[s] = f.symbol(a, s, ws.rows.data() + s * nd); FastPHY::unwrap(ws.phases, s); }
         double intercept, slope;
         FastPHY::phase_line(ws.phases, H, intercept, slope);
+        FastPHY::phase_track(ws.phases, H, intercept, slope, ws.track);
         const int air_bits = control_air * 8;
         ws.descrambled.assign(air_bits, 0);
         ws.confidence.resize(air_bits);
         double noise = 0;
         int points = 0;
         for (int s = 0; s < H; ++s) {
-            C correction = std::polar(f.scale, float(-(intercept + slope * s)));
+            C correction = std::polar(f.scale, float(-ws.track[s]));
             for (int j = 0; j < nd; ++j) {
                 const int bit = 2 * (s * nd + j);
                 if (bit >= air_bits) break;
@@ -301,6 +302,7 @@ struct FramedOFDMA {
         for (int s = 0; s < total; ++s) { ws.phases[s] = f.symbol(a, s, ws.rows.data() + s * nd); FastPHY::unwrap(ws.phases, s); }
         double intercept, slope;
         FastPHY::phase_line(ws.phases, total, intercept, slope);
+        FastPHY::phase_track(ws.phases, total, intercept, slope, ws.track);
         const int used = on_air_bytes(usr.length, usr.fec0, usr.fec1) * 8;
         const bool soft_input = usr.coded() && base.soft && fec::detail::conv(usr.fec1);
         ws.bytes.assign((used + 7) / 8, 0);
@@ -310,7 +312,7 @@ struct FramedOFDMA {
         int points = 0;
         for (int p = 0; p < P; ++p) {
             const int s = H + p;
-            C correction = std::polar(f.scale, float(-(intercept + slope * s)));
+            C correction = std::polar(f.scale, float(-ws.track[s]));
             for (int t = 0; t < tones; ++t) {
                 const int j = lo + t, bit = bps * (p * tones + t);
                 if (bit >= used) break;
