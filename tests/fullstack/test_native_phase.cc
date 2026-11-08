@@ -206,6 +206,23 @@ int main()
 
     timing(native, legacy);
 
+    // Near the coding threshold, no phase noise: what the receiver spends on noise.
+    {
+        const auto clean_n = frames(native, 1048), clean_l = frames(legacy, 1048);
+        const Phase none = [](size_t) { return 0.0; };
+
+        std::printf("\n1048-byte frames, no phase noise (delivered of %u, four noise seeds each)\n", 4*kFrames);
+        for (double snr : {6.0, 7.0, 8.0, 9.0, 10.0, 11.0}) {
+            unsigned n = 0, l = 0;
+
+            for (unsigned seed : {21u, 22u, 23u, 24u}) {
+                n += delivered(native, clean_n, snr, none, seed);
+                l += delivered(legacy, clean_l, snr, none, seed);
+            }
+            std::printf("  SNR %4.1f dB                  native %3u  liquid %3u\n", snr, n, l);
+        }
+    }
+
     struct Case { const char *name; std::function<Phase(unsigned)> make; };
     std::vector<Case> cases = {{"none", [](unsigned) { return Phase([](size_t) { return 0.0; }); }}};
 
