@@ -2,8 +2,8 @@ Host sensing delay: measurement scope
 =====================================
 
 Status 2026-11-10: M0 to M3 are done; see `M0 and M1 results`_, `M2
-results`_ and `M3 results`_. M4, the end-to-end reaction test, has not been
-prepared. The measurement steps that
+results`_ and `M3 results`_. M4, the end-to-end reaction test, is prepared
+and waiting for an RF go-ahead; see `M4 plan`_. The measurement steps that
 transmit (M3 and M4) each need Kapil's go-ahead with an RF approval
 reference, as usual, and none of them runs during OpenISAC.
 
@@ -634,6 +634,124 @@ What this shows:
 
 Summaries: ``simulation-results/sense-delay-m3-20261110`` (not committed);
 on gridgpu01, ``~/dragonradio-sense/m3``.
+
+M4 plan
+-------
+
+**What runs.** Two nodes of the same type, A and B. A sends a 128-sample
+burst every period. B listens with the probe's energy detector and replies
+to each burst it detects with the same burst. A hears both its own burst and
+B's reply on its own RX antenna, so A measures :math:`D` on its own clock,
+from the start of its burst to the start of the reply. No clock is shared
+between the nodes. This is the reaction test that M1 checked in simulation.
+
+B reacts with three settings:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 22 22 40
+
+   * - Setting
+     - ``rx_max_samps_factor``
+     - Reply
+     - Why
+   * - best
+     - 1
+     - timed, 0.2 ms ahead
+     - The settings that M2 and M3 point to
+   * - untimed
+     - 1
+     - untimed
+     - The other way to send a reply; M3 put it on air within 0.06 ms
+   * - default
+     - 8
+     - timed, 5 ms ahead
+     - The radio as configured today
+
+Each setting runs at 1 and 5 MS/s, in both directions (A and B swap), on
+two pairs:
+
+* N210: grid08 and grid01;
+* X310: grid44 and grid53.
+
+These are the M2 and M3 nodes, and the October radio map shows both pairs
+hearing each other strongly. That makes 24 cells. A pings for 60 s per cell,
+at a period of 60 ms (130 ms for the X310 default at 1 MS/s, so that B's
+holdoff after each reply never hides a ping). That is about 1000 trials per
+cell, or about 460 for the X310 default at 1 MS/s. A stays at factor 8 and a
+5 ms lead, as in M3; its settings don't affect the measurement.
+
+**Link check.** Before each pair's sweep, a 15 s cell at 1 MS/s runs at TX
+gain 0 dB, then 10 dB, then 20 dB, stopping at the first gain where A gets a
+reply to at least 95% of its pings. The whole pair then uses that gain. If
+20 dB is not enough, the pair is skipped.
+
+**RF.**
+
+* 1.322 GHz.
+* TX gain 0, 10 or 20 dB, from the link check (the scripts cap it at
+  20 dB).
+* The M3 burst: 128 samples at :math:`f_s/8` with 16-sample ramps, at most
+  5 MS/s, within the 5 MHz approval.
+* Each node sends one burst per period: duty cycle 0.21% at 1 MS/s and
+  0.04% at 5 MS/s.
+* One pair transmits at a time; the other pair is idle.
+* The OpenISAC watcher from M3 checks every 30 s, and no cell starts after
+  it sees an OpenISAC reservation. A cell lasts about 85 s, so at worst
+  about 2 minutes of these bursts could overlap the start of an OpenISAC
+  run.
+
+**What it measures.**
+
+* :math:`D` p50, p99 and max for each cell, and :math:`a` for one frame and
+  for an 8 ms aggregate.
+* :math:`D` against B's own estimate of its delay, from the edge it
+  detected to the reply. This checks the probe's clock mapping on hardware.
+* :math:`D` against the sum of the parts in the M3 results table: 0.76 ms
+  (N210, 1 MS/s), 0.62 ms (N210, 5 MS/s), 2.26 ms (X310, 1 MS/s) and
+  0.64 ms (X310, 5 MS/s) for the best setting. For the default setting, the
+  same sum with the factor-8 chunk and the 5 ms lead gives about 8.3 ms
+  (N210) and 21 ms (X310) at 1 MS/s.
+* Overflows, late bursts and missed replies on both nodes.
+
+**Time.** About 20 minutes per pair, plus the radio checks: about 50
+minutes in a 2 h reservation.
+
+**How it runs.** On gridgpu01, with the tree tarball ``ws-sense-f9dea594``, which adds the M4 scripts
+to the M3 build (the C++ is unchanged since ``bdf2801e``):
+
+.. code-block:: bash
+
+   bash ~/dragonradio-sense/bin/grid/sense-delay-m4-campaign.sh \
+       ~/dragonradio-port/ota-ws/ws-sense-f9dea594.tar.gz ~/dragonradio-sense/m4 \
+       grid08:grid01:N210 grid44:grid53:X310
+   python3 ~/dragonradio-sense/bin/grid/sense-delay-m4-table.py ~/dragonradio-sense/m4
+
+The scripts are on ``codex/native-radiowars2024`` at ``f9dea594``, local and not pushed:
+
+* ``grid/sense-delay-m4-campaign.sh`` runs from gridgpu01;
+* ``grid/run-sense-delay-m4-cell.sh`` runs one side of one cell on a node;
+* ``grid/sense-delay-m4-table.py`` tabulates the results.
+
+A dry run of the campaign (``DRY=1``, nothing reserved or sent) produced
+the expected cells and commands. The table script reproduces the M1
+simulation result: timed replies within 0.015 ms of B's own estimate, and
+untimed replies 2 ms later, which is the simulated device's send latency.
+
+**Limits of the method.**
+
+* Edges are found to within one 32-sample window: 0.032 ms at 1 MS/s,
+  0.006 ms at 5 MS/s.
+* A takes the first edge after its own burst as the reply. Stray energy,
+  like what grid01 saw in M3, can occasionally be taken for a reply, or can
+  put B in holdoff so that a ping is missed. Both show up as outliers or as
+  missed replies.
+* The hosts are idle, as in M2 and M3.
+
+**Needs.** Your go-ahead to transmit on two nodes at once, under the
+standing approvals: 1.322 GHz, TX gain at most 20 dB, at most 5 MHz, and no
+transmission during OpenISAC. Also your OK for a 2 h reservation of grid08,
+grid01, grid44 and grid53 (no flash).
 
 Result and decision
 -------------------
