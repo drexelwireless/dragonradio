@@ -1,0 +1,87 @@
+#!/bin/bash
+# drnb: start a student's JupyterLab in the dragonradio-nb image.
+#
+# Each user gets a slot. A slot is one physical core (both hyperthreads), a
+# port (DRNB_BASE_PORT + slot) and a lock file held for as long as the server
+# runs, so two servers never share cores. The server listens on 127.0.0.1
+# only; reach it through an SSH tunnel via dwslgrid (the command is printed).
+#
+# Usage: drnb [--slot N] [--dir DIR] [--list]
+#   --slot N   use slot N (default: the first free one)
+#   --dir DIR  notebook directory (default: $HOME)
+#   --list     show which slots are in use and exit
+# Environment: DRNB_PREFIX (default /opt/drnb), DRNB_MAX_SLOTS (default 8: the
+# strict-timing capacity measured for a 32-thread node), DRNB_BASE_PORT (8800).
+set -euo pipefail
+prefix=${DRNB_PREFIX:-/opt/drnb}
+max=${DRNB_MAX_SLOTS:-8}
+base=${DRNB_BASE_PORT:-8800}
+slots=/var/lib/drnb/slots
+nbvenv=$prefix/nbvenv
+tree=$prefix/dragonradio
+slot= dir=$HOME list=
+while [ $# -gt 0 ]; do
+  case $1 in
+    --slot) slot=$2; shift 2;;
+    --dir) dir=$2; shift 2;;
+    --list) list=1; shift;;
+    -h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0;;
+    *) echo "drnb: unknown argument $1" >&2; exit 2;;
+  esac
+done
+
+# Physical cores in order, each as its sibling list (e.g. "0,32"). Slot N is core N.
+mapfile -t cores < <(cat /sys/devices/system/cpu/cpu[0-9]*/topology/thread_siblings_list | sort -t, -k1,1n -u)
+[ "$max" -le "${#cores[@]}" ] || max=${#cores[@]}
+
+if [ -n "$list" ]; then
+  for ((i = 0; i < max; i++)); do
+    exec {fd}<"$slots/$i"
+    if flock -n "$fd"; then s=free; else s="in use (port $((base + i)))"; fi
+    exec {fd}<&-
+    echo "slot $i  cpus ${cores[$i]}  $s"
+  done
+  exit 0
+fi
+
+# Take a slot: hold a shared-readable lock file open on fd 9; exec keeps it
+# open, so the slot is released when the server exits for any reason.
+take() { exec 9<"$slots/$1" && flock -n 9; }
+if [ -n "$slot" ]; then
+  [ "$slot" -ge 0 ] && [ "$slot" -lt "$max" ] || { echo "drnb: slot must be 0..$((max - 1))" >&2; exit 2; }
+  take "$slot" || { echo "drnb: slot $slot is in use (drnb --list)" >&2; exit 1; }
+else
+  for ((i = 0; i < max; i++)); do
+    if take "$i"; then slot=$i; break; fi
+    exec 9<&-
+  done
+  [ -n "$slot" ] || { echo "drnb: all $max slots are in use on $(hostname) (drnb --list)" >&2; exit 1; }
+fi
+port=$((base + slot)); cpus=${cores[$slot]}
+
+# Jupyter sees only the image's configuration and kernels, never ~/.local
+# kernels from the shared home; runtime files stay node-local.
+user=$HOME/.local/share/drnb
+export JUPYTER_CONFIG_DIR=$user/config          # per-user, writable (lab settings)
+export JUPYTER_CONFIG_PATH=$prefix/etc/jupyter  # the image's defaults
+export JUPYTER_PATH=$nbvenv/share/jupyter
+export JUPYTER_DATA_DIR=$user/data
+export JUPYTER_RUNTIME_DIR=/tmp/drnb-$USER/runtime
+export IPYTHONDIR=$user/ipython
+export DRAGONRADIO_TREE=$tree NBVENV=$nbvenv VIRTUAL_ENV=$nbvenv
+export DRNB_SLOT=$slot DRNB_CPUS=$cpus DRNB_RADIO_NICE=10
+mkdir -p "$JUPYTER_CONFIG_DIR" "$JUPYTER_DATA_DIR" "$JUPYTER_RUNTIME_DIR" "$IPYTHONDIR"
+chmod 700 "/tmp/drnb-$USER"
+
+token=$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')
+host=$(hostname)
+cat <<EOF
+drnb: slot $slot on $host, cpus $cpus, port $port
+On your own computer, open a tunnel (leave it running):
+    ssh -N -L $port:127.0.0.1:$port -J dwslgrid.ece.drexel.edu $USER@$host
+then browse to:
+    http://127.0.0.1:$port/lab?token=$token
+Stop the server with Ctrl-C here.
+EOF
+exec taskset -c "$cpus" "$nbvenv/bin/jupyter-lab" --no-browser --ip=127.0.0.1 --port="$port" \
+  --port-retries=0 --ServerApp.root_dir="$dir" --IdentityProvider.token="$token"
