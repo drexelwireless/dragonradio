@@ -2,8 +2,8 @@ Host sensing delay: measurement scope
 =====================================
 
 Status 2026-11-10: M0 (the probe) and M1 (the simulation check) are done on
-this branch; see `M0 and M1 results`_. M2 to M4 have not run, and the probe
-is not yet on the class-image port branch. The measurement steps that
+this branch and on the class-image port branch; see `M0 and M1 results`_.
+M2 to M4 have not run. The measurement steps that
 transmit (M3 and M4) each need Kapil's go-ahead with an RF approval
 reference, as usual, and none of them runs during OpenISAC.
 
@@ -283,9 +283,21 @@ What this shows:
 * **Detection costs nothing.** A reply was handed to ``burstTX`` 20–30 µs
   after the edge was seen, and ``burstTX`` returned in under 0.1 ms.
 
+**The class-image port, 2026-11-10.** The probe is on
+``codex/native-radiowars2024`` (``ddf31fdf`` and ``87849d2d``, local, not
+pushed). It takes a ``Radio``, and the caller passes the receive chunk. It was
+built in the class image on grid47 (reservation 3308) and the same 12 runs
+were repeated there, all clean. Arrival delay was 2.07 and 2.18 ms at the
+2 ms setting (factor 1 and 8), and 10.07 and 10.18 ms at 10 ms. The measured
+:math:`D` medians were 7.62, 11.26, 19.33 and 4.58 ms, matching node 1's plan
+within 0.02 ms. The simulated device adds less on top of its latency there
+than on gridgpu01. In the class image, run the probe as
+``VIRTUAL_ENV=TREE/venv TREE/build/dragonradio scripts/sense-delay.py ...``.
+
 These numbers say nothing about real radios: the simulated latency is a
 setting. They check the instrument that M2 to M4 use. Raw summaries are in
-``simulation-results/sense-delay-m1-20261110`` (not committed).
+``simulation-results/sense-delay-m1-20261110`` and
+``sense-delay-m1-port-20261110`` (not committed).
 
 Result and decision
 -------------------
