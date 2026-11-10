@@ -1,9 +1,8 @@
 Host sensing delay: measurement scope
 =====================================
 
-Status 2026-11-10: M0 (the probe) and M1 (the simulation check) are done on
-this branch and on the class-image port branch; see `M0 and M1 results`_.
-M2 to M4 have not run. The measurement steps that
+Status 2026-11-10: M0, M1 and M2 are done; see `M0 and M1 results`_ and
+`M2 results`_. M3 and M4 have not run. The measurement steps that
 transmit (M3 and M4) each need Kapil's go-ahead with an RF approval
 reference, as usual, and none of them runs during OpenISAC.
 
@@ -299,8 +298,8 @@ setting. They check the instrument that M2 to M4 use. Raw summaries are in
 ``simulation-results/sense-delay-m1-20261110`` and
 ``sense-delay-m1-port-20261110`` (not committed).
 
-M2 plan (ready, not run)
-------------------------
+M2 plan
+-------
 
 **What runs.** The probe in receive-only mode on four nodes at once, each
 sweeping its own radio. On every cell the radio streams for 60 s; nothing is
@@ -376,6 +375,112 @@ estimate of :math:`a` for the CSMA decision.
 **Needs.** Your go-ahead for one 1 h reservation of grid08, grid01, grid44
 and grid53. Nothing is transmitted, so no RF approval is involved.
 
+M2 results
+----------
+
+**Runs, 2026-11-10, receive only, nothing transmitted.** These ran on grid08
+and grid01 (N210, i7-6700 hosts) and grid44 and grid53 (X310, EPYC 7452
+hosts), using the class image with UHD 3.9.5, at 1.322 GHz.
+
+* **Reservation 3312.** Every cell stopped before streaming, because opening
+  a USRP needs root. Fixed in ``649f201e``, which runs the radio through
+  ``sudo -n`` as the OTA runner does.
+* **Reservation 3313.** All 56 cells ran, but one chunk in five to ten
+  disappeared. The probe asked for each next chunk at a start time that
+  floating point sometimes rounded just past its first packet, and
+  ``burstRX`` dropped that packet. The arrival delays from this run agree
+  with run 2, but its gap counts are wrong. Fixed in ``bdf2801e`` on both
+  branches.
+* **Reservation 3314** (``bdf2801e``). All 56 cells ran cleanly. Every result
+  below comes from this run.
+
+UHD reported no overflow and no receive error in any cell. Samples per
+packet were 363 on the N210 (1472-byte frames) and 1996 on the X310
+(8000-byte frames), as predicted. The receive chunk at the radio's default
+factor of 8 is therefore 2.90 ms on the N210 and 15.97 ms on the X310 at
+1 MS/s.
+
+:math:`D_\mathrm{rx}` is measured from the end of a chunk's last sample to
+the moment the host has it. In milliseconds:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 14 14 14 14 28
+
+   * - Radio
+     - Rate
+     - p50
+     - p99
+     - Max
+     - CPU (share of one core)
+   * - N210
+     - 1 MS/s
+     - 0.13
+     - 0.16
+     - 0.3–3.4
+     - 0.13–0.15
+   * - N210
+     - 2 MS/s
+     - 0.11
+     - 0.37
+     - 0.4–3.2
+     - 0.05
+   * - N210
+     - 5 MS/s
+     - 0.14–0.15
+     - 0.34
+     - 0.6–7.8
+     - 0.07–0.09
+   * - X310
+     - 1 MS/s
+     - 0.023
+     - 0.03
+     - 0.04–0.12
+     - 0.008
+   * - X310
+     - 2, 5, 10 MS/s
+     - 0.022–0.026
+     - 0.027–0.031
+     - 0.04–1.9
+     - 0.01–0.06
+
+The median and p99 do not depend on the factor. The largest maxima, a few
+milliseconds, are rare and come at factors 1 and 2. On both N210 hosts, the
+1 MS/s p99 is lower than at 2 and 5 MS/s; the reason was not looked into.
+
+**Gaps.** No cell lost samples at any factor down to 1, at any rate. The one
+exception is an artifact. On grid01 at 5 MS/s, factors 8, 4 and 2 showed
+about 5,340 steps of exactly one sample each (one every 11 ms), with no
+overflow reported. grid08 at the same rate, and grid01 at factor 1, showed
+none. That looks like a timestamp effect on that radio, not lost data, but
+it is unexplained.
+
+What this shows:
+
+* **The receive delay is the chunk.** Once a chunk is complete, the host has
+  it within 0.15 ms on an N210 and 0.03 ms on an X310 (p99 at most 0.38 ms).
+  So :math:`D_\mathrm{rx}` is the time to fill a chunk plus a fraction of a
+  millisecond. Factor 1 works on both radios at every rate tried, at least
+  while only receiving. That gives a chunk of 0.36 ms on the N210 and 2.0 ms
+  on the X310 at 1 MS/s, against 2.9 and 16 ms at the default.
+* **Only the X310 at low rates still has a long chunk.** It sends 1996
+  samples per packet, so even factor 1 means 2 ms at 1 MS/s. At 5 MS/s
+  factor 1 is 0.4 ms. A smaller ``recv_frame_size`` would shorten it at
+  1 MS/s; this was not tried.
+* **The send lead is now the term to beat.** With factor 1 on an N210 at
+  1 MS/s, :math:`D` is about 0.2 ms of receive plus the TX lead (5 ms by
+  default). For :math:`a \le 0.1` with an 8 ms frame, :math:`D` must be
+  under 0.8 ms, so the lead would have to be under about 0.5 ms. M3
+  measures how small it can go.
+* **These are idle-host numbers.** In the full radio, demodulation competes
+  for the CPU. Also, the frequency-domain channelizer works in blocks of
+  67,200 samples, which add about 14 ms. A CSMA sensing path should read
+  the receive stream directly, not through that channelizer.
+
+Summaries: ``simulation-results/sense-delay-m2-20261110`` (run 2) and
+``sense-delay-m2-run1-20261110`` (run 1), not committed; on gridgpu01,
+``~/dragonradio-sense``.
+
 Result and decision
 -------------------
 
@@ -406,10 +511,7 @@ Knobs to try if :math:`D` is too large
 Open questions
 --------------
 
-* The samples per packet that UHD 4.6 reports on the class image for each
-  radio type. M2 logs them.
-* Whether the grid's node CPUs can keep up at factor 1 and 5 MS/s without
-  overflows.
+* Whether factor 1 still holds with the full radio's demodulation load.
 * Whether the channelizer starts on a partly filled buffer as soon as each
   ``recv`` chunk arrives. ``MAC::rxWorker`` pushes the buffer before it
   fills, and M1 should confirm that the full radio adds nothing beyond the

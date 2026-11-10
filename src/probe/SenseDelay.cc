@@ -149,7 +149,11 @@ void SenseDelayProbe::rxLoop(void)
 
             process(buf, n, h);
 
-            t = *buf.timestamp + static_cast<double>(n)/fs;
+            // Ask for the next chunk half a sample early. Its first packet
+            // starts exactly at the end of this one, and burstRX drops packets
+            // that start before the requested time, so a start rounded a hair
+            // late in floating point would drop a whole chunk.
+            t = *buf.timestamp + (static_cast<double>(n) - 0.5)/fs;
         }
 
         usrp_->stopRXStream();
