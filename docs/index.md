@@ -34,6 +34,7 @@ colosseum
 utilities
 radiowars2024-port
 teaching-notebooks-plan
+notebooks-phase0
 defaults-2026-11
 ```
 
