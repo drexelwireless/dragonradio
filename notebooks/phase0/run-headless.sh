@@ -5,12 +5,15 @@
 # ~/dragonradio-nb/results/phase0), never into the tree.
 #
 # Usage: run-headless.sh NOTEBOOK.py [papermill args, e.g. -p N_PACKETS 20]
-# Env:   NBVENV (default /tmp/drnb/nbvenv), OUTDIR, TIMEOUT (cell timeout, s)
+# Env:   NBVENV (default /tmp/drnb/nbvenv), OUTDIR, TIMEOUT (cell timeout, s),
+#        RUN_NAME (executed copy is OUTDIR/RUN_NAME.executed.ipynb; default the
+#        notebook name)
 set -euo pipefail
 nbvenv=${NBVENV:-/tmp/drnb/nbvenv}
 out=${OUTDIR:-$HOME/dragonradio-nb/results/phase0}
 py=$(realpath "$1"); shift
 name=$(basename "$py" .py)
+run=${RUN_NAME:-$name}
 mkdir -p "$out"
 work=$(mktemp -d /tmp/drnb-nb.XXXXXX)
 trap 'rm -rf "$work"' EXIT
@@ -18,8 +21,8 @@ trap 'rm -rf "$work"' EXIT
 start=$(date +%s.%N)
 set +e
 "$nbvenv/bin/papermill" --no-progress-bar --log-output --cwd "$(dirname "$py")" \
-    --execution-timeout "${TIMEOUT:-1800}" "$work/$name.ipynb" "$out/$name.executed.ipynb" "$@"
+    --execution-timeout "${TIMEOUT:-1800}" "$work/$name.ipynb" "$out/$run.executed.ipynb" "$@"
 rc=$?
 set -e
-printf '%s exit=%d wall=%.1fs executed=%s\n' "$name" "$rc" "$(echo "$(date +%s.%N) - $start" | bc)" "$out/$name.executed.ipynb"
+printf '%s exit=%d wall=%.1fs executed=%s\n' "$run" "$rc" "$(echo "$(date +%s.%N) - $start" | bc)" "$out/$run.executed.ipynb"
 exit $rc
