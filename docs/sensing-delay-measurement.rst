@@ -1,9 +1,9 @@
 Host sensing delay: measurement scope
 =====================================
 
-Status 2026-11-10: M0, M1 and M2 are done; see `M0 and M1 results`_ and
-`M2 results`_. M3 is ready and waits for the RF go-ahead (`M3 plan (ready,
-needs the RF go-ahead)`_); M4 has not been prepared. The measurement steps that
+Status 2026-11-10: M0 to M3 are done; see `M0 and M1 results`_, `M2
+results`_ and `M3 results`_. M4, the end-to-end reaction test, has not been
+prepared. The measurement steps that
 transmit (M3 and M4) each need Kapil's go-ahead with an RF approval
 reference, as usual, and none of them runs during OpenISAC.
 
@@ -482,8 +482,8 @@ Summaries: ``simulation-results/sense-delay-m2-20261110`` (run 2) and
 ``sense-delay-m2-run1-20261110`` (run 1), not committed; on gridgpu01,
 ``~/dragonradio-sense``.
 
-M3 plan (ready, needs the RF go-ahead)
--------------------------------------
+M3 plan
+-------
 
 **What runs.** Each node in turn sends a short burst every 20 ms. Each burst
 is timed at the device time estimate plus a fixed lead. The node counts the
@@ -545,6 +545,95 @@ is the simulated device's 2 ms send latency.
 **Needs.** Your go-ahead to transmit, under the standing approvals:
 1.322 GHz, TX gain at most 20 dB (0 dB used), at most 5 MHz, and no
 transmission during OpenISAC.
+
+M3 results
+----------
+
+**Run, 2026-11-10, reservation 3316.** The run used grid08 and grid01 (N210)
+and grid44 and grid53 (X310), one node at a time, starting at 17:42 UTC and
+finishing at 18:23 UTC. RF was 1.322 GHz at 0 dB TX gain, run with Kapil's
+go-ahead under the standing approvals. No OpenISAC reservation appeared
+during the run, and the reservation was released.
+
+All 96 cells ran, each with about 975 bursts:
+
+* **No burst was late** in any cell, at any lead down to 0.1 ms, at 1 or
+  5 MS/s, on either radio. That is about 93,600 bursts with no late report
+  and no underflow.
+* **Every burst left on time.** Each node heard its own bursts, missing at
+  most one per cell. The own-burst edge was within 0.022 ms of the requested
+  time at 1 MS/s, and within 0.009 ms at 5 MS/s. That is within one 32-sample
+  detection window.
+* **Untimed bursts reached the air within 0.06 ms** of ``burstTX``
+  returning: 0.015–0.037 ms at the median on the N210, and 0.011–0.027 ms on
+  the X310.
+
+grid01 saw extra energy edges in a few cells (up to about 700 in 20 s) that
+were not its own bursts. That was probably another transmitter in the
+building; another user's reservation (3315) was active. Its own bursts still
+matched one for one.
+
+What this shows:
+
+* **The send side costs a fraction of a millisecond.** A lead of 0.1 ms was
+  never late. The device time estimate is uncertain by up to half a round
+  trip, so the true margin was 0.03–0.17 ms on an N210 and about 0.1 ms on an
+  X310. A lead of 0.2 ms, or untimed sending, leaves room for a busier host.
+  The radio's default ``slot_send_lead_time`` of 5 ms suits a TDMA slot
+  plan; it is not a limit of the hardware.
+* **D can be under a millisecond.** Adding the parts from M2 and M3 gives an
+  estimate for an idle host, still to be checked end to end by M4: one
+  detection window, plus a whole chunk (worst case), plus the p99 arrival
+  delay, plus a 0.2 ms lead. :math:`T` is the airtime of one 1048-byte native
+  frame (8 ms at 1 MS/s, 1.6 ms at 5 MS/s) or of an 8 ms aggregate.
+
+  .. list-table::
+     :header-rows: 1
+     :widths: 30 14 14 14 14
+
+     * - Setting
+       - :math:`D` (ms)
+       - :math:`a`, one frame
+       - :math:`a`, 8 ms aggregate
+       - Default factor 8, 5 ms lead
+     * - N210, 1 MS/s, factor 1
+       - 0.76
+       - 0.10
+       - 0.10
+       - :math:`a \approx 1.0`
+     * - N210, 5 MS/s, factor 1
+       - 0.62
+       - 0.39
+       - 0.08
+       - –
+     * - X310, 1 MS/s, factor 1
+       - 2.26
+       - 0.28
+       - 0.28
+       - :math:`a \approx 2.6`
+     * - X310, 5 MS/s, factor 1
+       - 0.64
+       - 0.40
+       - 0.08
+       - –
+
+* **Decision, provisionally "fast enough".** With factor 1 and a short lead,
+  the N210 at 1 MS/s reaches :math:`a \approx 0.1` with single frames. Both
+  radios reach it at 5 MS/s with frames aggregated to about 8 ms. The X310 at
+  1 MS/s is held back by its 1996-sample packets; a smaller receive frame
+  size should help there. The radio as configured today (factor 8, 5 ms
+  lead) sits at :math:`a \ge 1`, where CSMA loses to ALOHA. That makes a
+  good teaching contrast.
+* **Still open.**
+
+  * M4 measures :math:`D` end to end on air, without relying on the sum.
+  * The full radio adds demodulation load and, through its
+    frequency-domain channelizer, about 14 ms. So a CSMA MAC needs its own
+    sensing path on the raw receive stream, and must run at factor 1 under
+    load.
+
+Summaries: ``simulation-results/sense-delay-m3-20261110`` (not committed);
+on gridgpu01, ``~/dragonradio-sense/m3``.
 
 Result and decision
 -------------------
