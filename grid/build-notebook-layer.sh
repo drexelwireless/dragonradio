@@ -7,6 +7,8 @@
 #    nbstripout and myst-nb at the versions pinned in requirements-notebooks.txt.
 #    Like build-in-class-image.sh's venv, it sees this tree's dragonradio
 #    package (and dragonradio.tools) first, then the image venv's packages.
+#  * dragonradiocpp_tools_mgen (dragonradio.tools' compiled MGEN parser),
+#    built into NBVENV.
 #  * NBVENV/dragonradio-build: this tree built again with
 #    -DDRAGONRADIO_NOTEBOOK=ON (dragonradiocpp.notebook helpers). The tree's
 #    own build/ stays the default build.
@@ -42,6 +44,14 @@ printf '%s\n' "$src/python/dragonradio/src" "$src/python/dragonradio-tools/src" 
 
 "$nbvenv/bin/python" -m pip install -q --progress-bar off --disable-pip-version-check -r "$src/requirements-notebooks.txt"
 
+# dragonradio.tools (log reading, drgui) imports dragonradiocpp_tools_mgen, a
+# pybind11 extension in python/dragonradio-tools/csrc that neither the image
+# venv nor build-in-class-image.sh builds. Build it into NBVENV.
+tmp=$(mktemp -d)
+(cd "$src/python/dragonradio-tools" && SETUPTOOLS_SCM_PRETEND_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION:-0+port} \
+    "$nbvenv/bin/python" setup.py -q build_ext --build-lib "$site" --build-temp "$tmp") > "$nbvenv/mgen.log" 2>&1
+rm -rf "$tmp"
+
 # The dragonradio executable with the notebook helpers, built out of tree so
 # that grid/node-build.sh's rsync --delete leaves it alone.
 nbbuild=$nbvenv/dragonradio-build
@@ -75,7 +85,7 @@ cat > "$kdir/kernel.json" <<EOF
 EOF
 
 # Check: the layer's tools, and dragonradiocpp in the kernel's interpreter.
-"$nbvenv/bin/python" -c 'import jupyterlab, ipympl, papermill, nbclient, jupytext, myst_nb; print("nbvenv: jupyterlab", jupyterlab.__version__, "ipympl", ipympl.__version__, "papermill", papermill.__version__)'
+"$nbvenv/bin/python" -c 'import jupyterlab, ipympl, papermill, nbclient, jupytext, myst_nb, dragonradiocpp_tools_mgen; print("nbvenv: jupyterlab", jupyterlab.__version__, "ipympl", ipympl.__version__, "papermill", papermill.__version__)'
 "$nbvenv/bin/dragonradio-python" -c 'import sys, dragonradiocpp.notebook, dragonradio.radio, ipykernel; print("kernel python:", sys.executable, "prefix", sys.prefix)' 2>&1 | grep -v -e '^linux; GNU C++' -e '^$' -e 'smallest subnormal' -e 'return self._float_to_str'
 # jupyter_core and jupyter_client come from the image, so NBVENV/bin has no
 # jupyter or jupyter-kernelspec; ask jupyter_client directly.

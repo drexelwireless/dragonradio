@@ -16,7 +16,15 @@ jupytext==1.19.6
 nbstripout==0.9.1
 myst-nb==1.4.0
 
-# Their dependencies, as resolved (pinned so the layer rebuilds identically)
+# dragonradio-tools dependencies the image lacks (log reading imports xdg;
+# the DataFrame cache uses fastparquet)
+xdg==6.0.0
+fastparquet==2026.9.0
+cramjam==2.14.0
+fsspec==2026.9.0
+
+# Dependencies of the requested packages, as resolved (pinned so the layer
+# rebuilds identically)
 alabaster==1.0.0
 anyio==4.16.0
 arrow==1.4.0
