@@ -33,6 +33,7 @@ running/index
 colosseum
 utilities
 radiowars2024-port
+teaching-notebooks-plan
 defaults-2026-11
 ```
 
