@@ -197,7 +197,12 @@ def main():
                     help='hardware: transmitting is approved (RF go-ahead with an approval reference)')
     ap.add_argument('--out', help='write the JSON summary here')
     ap.add_argument('--raw', help='write every measurement (JSON) here')
-    args = ap.parse_args()
+    # Some builds of the radio executable pass its own argv through, so
+    # sys.argv[1] is this script; skip it.
+    argv = sys.argv[1:]
+    if argv and argv[0].endswith('sense-delay.py'):
+        argv = argv[1:]
+    args = ap.parse_args(argv)
 
     transmits = args.mode in ('react', 'ping')
     if args.addr and transmits:
