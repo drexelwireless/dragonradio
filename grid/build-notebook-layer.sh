@@ -16,8 +16,9 @@
 #    uses NBVENV as its virtual environment.
 #  * The "dragonradio" Jupyter kernel (NBVENV/share/jupyter/kernels), which
 #    runs ipykernel on dragonradio-python, so a notebook can call the native
-#    and liquid PHYs in-process. The default "python3" kernel is NBVENV's
-#    python and has no dragonradiocpp.
+#    and liquid PHYs in-process; and "drnb-python3", NBVENV's own python
+#    (no dragonradiocpp). The image's "python3" kernel runs /usr/bin/python3,
+#    which does not see NBVENV.
 #
 # Idempotent: rerun after rebuilding the tree.
 #
@@ -59,6 +60,17 @@ cat > "$kdir/kernel.json" <<EOF
   "language": "python",
   "env": {"VIRTUAL_ENV": "$nbvenv", "DRAGONRADIO_TREE": "$src"},
   "metadata": {"debugger": false}
+}
+EOF
+kdir=$nbvenv/share/jupyter/kernels/drnb-python3
+mkdir -p "$kdir"
+cat > "$kdir/kernel.json" <<EOF
+{
+  "argv": ["$nbvenv/bin/python", "-m", "ipykernel_launcher", "-f", "{connection_file}"],
+  "display_name": "Python 3 (notebook layer)",
+  "language": "python",
+  "env": {"VIRTUAL_ENV": "$nbvenv", "DRAGONRADIO_TREE": "$src"},
+  "metadata": {"debugger": true}
 }
 EOF
 
