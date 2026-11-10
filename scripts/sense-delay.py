@@ -26,6 +26,8 @@ import argparse
 import bisect
 import json
 import math
+import os
+import resource
 import sys
 
 from _dragonradio.radio import USRP, SimUSRP, runSenseDelay  # pylint: disable=no-name-in-module
@@ -234,11 +236,18 @@ def main():
         print(f'note: --period {args.period} is short against a react holdoff of about {args.holdoff:.3f} s',
               file=sys.stderr)
 
+    ru0 = resource.getrusage(resource.RUSAGE_SELF)
     r = runSenseDelay(usrp, mode=args.mode, duration=args.duration, window=args.window,
                       threshold_db=args.threshold_db, noise_secs=args.noise_secs,
                       lead=args.lead, period=args.period, holdoff=args.holdoff,
                       burst_len=args.burst_len, amplitude=args.amplitude)
+    ru1 = resource.getrusage(resource.RUSAGE_SELF)
     s = analyze(r, args)
+    # Process CPU during the run, as a share of one core, and host load.
+    cpu = (ru1.ru_utime - ru0.ru_utime) + (ru1.ru_stime - ru0.ru_stime)
+    s['cpu_one_core'] = round(cpu/args.duration, 3)
+    s['host_loadavg'] = os.getloadavg()
+    s['host_cpus'] = os.cpu_count()
     s['holdoff_ms'] = round(args.holdoff*1e3, 3)
     if args.sim_air:
         s['sim_rx_latency_ms'] = args.sim_rx_latency*1e3

@@ -299,6 +299,83 @@ setting. They check the instrument that M2 to M4 use. Raw summaries are in
 ``simulation-results/sense-delay-m1-20261110`` and
 ``sense-delay-m1-port-20261110`` (not committed).
 
+M2 plan (ready, not run)
+------------------------
+
+**What runs.** The probe in receive-only mode on four nodes at once, each
+sweeping its own radio. On every cell the radio streams for 60 s; nothing is
+sent. The rx mode never calls ``burstTX``, and the TX gain is set to 0 dB.
+That is the same exposure as the earlier no-RF health probes, which also
+opened the radios.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 14 12 36 38
+
+   * - Node
+     - Radio
+     - Why
+     - Cells
+   * - grid08
+     - N210
+     - S1 node, used in every N210 campaign
+     - 1, 2, 5 MS/s × factor 8, 4, 2, 1 (12 cells, about 14 min)
+   * - grid01
+     - N210
+     - W1 node, a second N210 host
+     - Same
+   * - grid44
+     - X310
+     - FPGA 19.0 at the 2026-11-10 02:19 UTC probe
+     - 1, 2, 5, 10 MS/s × factor 8, 4, 2, 1 (16 cells, about 18 min)
+   * - grid53
+     - X310
+     - Healthy in step 3 (2026-11-09)
+     - Same
+
+RX gain is 20 dB on the N210s and 10 dB on the X310s, as in the OTA
+campaigns.
+
+**How it runs.** On gridgpu01:
+
+.. code-block:: bash
+
+   grid/sense-delay-m2-campaign.sh ~/dragonradio-port/ota-ws/ws-sense-b188d573.tar.gz \
+       ~/dragonradio-sense/m2 grid08:N210 grid01:N210 grid44:X310 grid53:X310
+
+Both scripts are on ``codex/native-radiowars2024`` (``b188d573``, local, not
+pushed). The tarball is the class-image build from grid47. Its C++ is
+unchanged since ``ddf31fdf``, and it passed the M1 check. The campaign script:
+
+* refuses to start while an OpenISAC reservation is active;
+* reserves the four nodes for 1 h with the class image and ``--no-flash``,
+  and with no DragonRadio service and no traffic;
+* checks each radio with ``uhd_usrp_probe``. It skips an X310 that does not
+  report FPGA compatibility 19 rather than flashing it, because flashing
+  needs your OK;
+* installs the tree and runs all nodes at once;
+* releases the reservation whatever happens.
+
+Expect about 30 minutes in all.
+
+**What each cell records.**
+
+* Samples per packet, through ``rx_max_samps``. These are the class image's
+  values on UHD 3.9.5, which answer the first open question below.
+* :math:`D_\mathrm{rx}` p50, p99 and max.
+* Gaps between chunks, which are overflows.
+* Receive errors.
+* Clock round-trip and drift.
+* Process CPU as a share of one core, and host load.
+
+**What it decides.** For each radio and rate, the smallest factor with no
+gaps, and :math:`D_\mathrm{rx}` there and at the default factor of 8. Those
+two numbers set the settings M3 and M4 use, and they give the first hardware
+estimate of :math:`a` for the CSMA decision.
+
+**Needs.** Your go-ahead for one 1 h reservation of grid08, grid01, grid44
+and grid53. Nothing is transmitted, so no RF approval is involved.
+
 Result and decision
 -------------------
 
