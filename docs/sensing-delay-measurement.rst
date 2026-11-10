@@ -2,9 +2,10 @@ Host sensing delay: measurement scope
 =====================================
 
 Status 2026-11-10: M0 to M4 are done; see `M0 and M1 results`_, `M2
-results`_, `M3 results`_ and `M4 results`_. On an idle host the end-to-end
-sensing delay is 0.5–0.8 ms at p99 with a 1-packet receive chunk, so CSMA can
-reach :math:`a \approx 0.1`. The measurement steps that
+results`_, `M3 results`_ and `M4 results`_. On an idle host, with a
+1-packet receive chunk, the end-to-end sensing delay is 0.45–0.83 ms at p99
+(about 2.2 ms on the X310 at 1 MS/s), so CSMA can reach
+:math:`a \approx 0.1`. The measurement steps that
 transmit (M3 and M4) each need Kapil's go-ahead with an RF approval
 reference, as usual, and none of them runs during OpenISAC.
 
