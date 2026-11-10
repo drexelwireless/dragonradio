@@ -1,0 +1,67 @@
+# Notebook layer for the class image (krd26/dragonradio-class-gr310-20261027-v2,
+# Python 3.14). Installed by grid/build-notebook-layer.sh into a venv above the
+# image venv; never into the image. Resolved on grid47, 2026-11-10: every
+# package came from a py3 wheel, nothing was compiled.
+#
+# The rest comes from the image and is not reinstalled: nbclient 0.10.4,
+# ipykernel 7.1.0, ipywidgets 8.1.5, matplotlib 3.10.7, numpy 2.3.5,
+# pandas 2.3.3, h5py 3.15.1, scipy 1.16.3, notebook 6.4.13, rich.
+
+# Requested packages
+jupyterlab==4.6.6
+ipympl==0.10.0
+papermill==2.7.0
+nbclient==0.10.4
+jupytext==1.19.6
+nbstripout==0.9.1
+myst-nb==1.4.0
+
+# Their dependencies, as resolved (pinned so the layer rebuilds identically)
+alabaster==1.0.0
+anyio==4.16.0
+arrow==1.4.0
+async-lru==2.4.0
+babel==2.18.0
+docutils==0.22.4
+entrypoints==0.4.2
+fqdn==1.6.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+imagesize==2.0.1
+importlib_metadata==10.2.0
+isoduration==20.11.0
+json5==0.17.3
+jupyter-cache==1.0.1
+jupyter-events==0.12.1
+jupyter-lsp==2.3.1
+jupyter_builder==1.2.4
+jupyter_server==2.21.1
+jupyter_server_terminals==0.5.4
+jupyterlab_server==2.28.1
+lazy-importer==0.1.0
+markdown-it-py==4.2.0
+mdit-py-plugins==0.6.1
+myst-parser==5.1.0
+notebook_shim==0.2.4
+python-json-logger==4.2.0
+rfc3339-validator==0.1.4
+rfc3986-validator==0.1.1
+roman-numerals==4.1.0
+snowballstemmer==3.1.1
+Sphinx==9.2.0
+sphinxcontrib-applehelp==2.0.0
+sphinxcontrib-devhelp==2.0.0
+sphinxcontrib-htmlhelp==2.1.0
+sphinxcontrib-jsmath==2.0.0
+sphinxcontrib-qthelp==2.0.0
+sphinxcontrib-serializinghtml==2.0.0
+SQLAlchemy==2.1.8
+tabulate==0.10.0
+tenacity==9.2.1
+tinycss2==1.4.0
+typing_extensions==4.16.0
+tzdata==2026.6
+uri-template==1.3.0
+webcolors==25.10.0
+websocket-client==1.9.2
