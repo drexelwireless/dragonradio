@@ -64,6 +64,15 @@ add_executable(dragonradio
 )
 target_link_libraries(dragonradio PRIVATE DragonRadio)
 
+# Notebook helpers (dragonradiocpp.notebook: packet-level modulate/demodulate
+# for any PHY), for a Jupyter kernel that runs this executable as its Python.
+# Off by default; the radio does not use them. See docs/notebooks-phase0.rst.
+option(DRAGONRADIO_NOTEBOOK "Build the dragonradiocpp.notebook helpers" OFF)
+if(DRAGONRADIO_NOTEBOOK)
+  target_sources(dragonradio PRIVATE src/python/Notebook.cc)
+  target_compile_definitions(dragonradio PRIVATE DRAGONRADIO_NOTEBOOK)
+endif()
+
 add_custom_target(python ALL
                   DEPENDS
                   ${CMAKE_CURRENT_SOURCE_DIR}/python/dragonradio/src/dragonradio/proto/sc2/cil_pb2.py

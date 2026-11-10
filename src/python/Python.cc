@@ -7,6 +7,10 @@ namespace py = pybind11;
 
 #include "python/PyModules.hh"
 
+#if defined(DRAGONRADIO_NOTEBOOK)
+void exportNotebook(py::module &m);
+#endif /* defined(DRAGONRADIO_NOTEBOOK) */
+
 #if defined(PYMODULE)
 PYBIND11_MODULE(dragonradiocpp, m) {
 #else /* !defined(PYMODULE) */
@@ -76,5 +80,11 @@ PYBIND11_EMBEDDED_MODULE(dragonradiocpp, m) {
     exportSim(mradio);
 
     exportNetUtil(mnet);
+
+#if defined(DRAGONRADIO_NOTEBOOK)
+    auto mnotebook = m.def_submodule("notebook");
+
+    exportNotebook(mnotebook);
+#endif /* defined(DRAGONRADIO_NOTEBOOK) */
 #endif /* !defined(PYMODULE) */
 }
