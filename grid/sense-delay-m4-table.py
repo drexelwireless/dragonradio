@@ -35,12 +35,15 @@ def main():
     ap.add_argument('--csv')
     args = ap.parse_args()
     root = pathlib.Path(args.out)
-    reacts = {p.name[:-len('.react.json')]: p for p in root.rglob('*.react.json')}
+    # Key by pair directory and cell name: the link-check cells have the
+    # same name in every pair.
+    reacts = {(p.parent.parent, p.name[:-len('.react.json')]): p for p in root.rglob('*.react.json')}
     rows = []
     for p in sorted(root.rglob('*.ping.json')):
         name = p.name[:-len('.ping.json')]
         a = json.loads(p.read_text())
-        b = json.loads(reacts[name].read_text()) if name in reacts else {}
+        key = (p.parent.parent, name)
+        b = json.loads(reacts[key].read_text()) if key in reacts else {}
         d = a.get('d_total_ms') or {}
         pings = a.get('pings') or 0
         got = pings - (a.get('own_missed') or 0) - (a.get('reply_missed') or 0)
@@ -52,7 +55,7 @@ def main():
         rate = a.get('rate') or 0
         p99 = d.get('p99')
         rows.append({
-            'cell': name,
+            'cell': name if not name.startswith('check') else f'{p.parent.parent.name}-{name}',
             'pings': pings,
             'replied': round(got/pings, 3) if pings else None,
             'D_p50': d.get('p50'), 'D_p90': d.get('p90'), 'D_p99': p99, 'D_max': d.get('max'),
