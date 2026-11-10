@@ -73,6 +73,7 @@ add_library(DragonRadio
   python/Packet.cc
   python/Radio.cc
   python/Resample.cc
+  python/Probe.cc
   python/Sim.cc
   python/Snapshot.cc
   python/Synthesizer.cc
@@ -80,6 +81,7 @@ add_library(DragonRadio
   python/WorkQueue.cc
   sim/SimTraffic.cc
   sim/SimUSRP.cc
+  probe/SenseDelay.cc
   util/exec.cc
   util/net.cc
   util/ssprintf.cc
@@ -113,7 +115,7 @@ target_link_libraries(DragonRadio PUBLIC ${LIQUIDDSP_LIBRARIES})
 set_source_files_properties(phy/NativeOFDM.cc phy/NativeOFDMA.cc python/NativePHY.cc
                             PROPERTIES COMPILE_OPTIONS "-fno-finite-math-only")
 # The simulated device counts non-finite samples it sends and delivers.
-set_source_files_properties(sim/SimUSRP.cc
+set_source_files_properties(sim/SimUSRP.cc probe/SenseDelay.cc
                             PROPERTIES COMPILE_OPTIONS "-fno-finite-math-only")
 
 # Native PHY FEC (src/simulation/NativeFEC.hh): the libfec API, from libfec or

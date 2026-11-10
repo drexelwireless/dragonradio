@@ -78,6 +78,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradiocpp, m) {
     exportNativePHYs(mradio);
 
     exportSim(mradio);
+    exportProbe(mradio);
 
     exportNetUtil(mnet);
 
