@@ -1,9 +1,10 @@
 Host sensing delay: measurement scope
 =====================================
 
-Status 2026-11-10: M0 to M3 are done; see `M0 and M1 results`_, `M2
-results`_ and `M3 results`_. M4, the end-to-end reaction test, is prepared
-and waiting for an RF go-ahead; see `M4 plan`_. The measurement steps that
+Status 2026-11-10: M0 to M4 are done; see `M0 and M1 results`_, `M2
+results`_, `M3 results`_ and `M4 results`_. On an idle host the end-to-end
+sensing delay is 0.5–0.8 ms at p99 with a 1-packet receive chunk, so CSMA can
+reach :math:`a \approx 0.1`. The measurement steps that
 transmit (M3 and M4) each need Kapil's go-ahead with an RF approval
 reference, as usual, and none of them runs during OpenISAC.
 
@@ -752,6 +753,168 @@ untimed replies 2 ms later, which is the simulated device's send latency.
 standing approvals: 1.322 GHz, TX gain at most 20 dB, at most 5 MHz, and no
 transmission during OpenISAC. Also your OK for a 2 h reservation of grid08,
 grid01, grid44 and grid53 (no flash).
+
+M4 results
+----------
+
+**Run, 2026-11-10, reservation 3320.** The pairs were grid08 and grid01
+(N210) and grid44 and grid53 (X310), one pair at a time, from 21:45 to
+22:21 UTC. RF was 1.322 GHz, with Kapil's go-ahead under the standing
+approvals. Both link checks passed at TX gain 0 dB, with replies to all 241
+pings, so every cell ran at 0 dB. No OpenISAC reservation appeared, and the
+reservation was released.
+
+All 24 cells ran, with 991 pings each (457 for the X310 default at 1 MS/s).
+There were no late bursts and no underflows on any node. The two directions
+of each pair agree within 0.03 ms at p50 and p99, so the table gives the
+larger value of the two.
+
+.. list-table:: End-to-end sensing delay :math:`D`, measured on the pinging node's clock
+   :header-rows: 1
+   :widths: 22 14 12 12 14 13 13
+
+   * - Radio, rate
+     - B's setting
+     - :math:`D` p50 (ms)
+     - :math:`D` p99 (ms)
+     - M3 estimate (ms)
+     - :math:`a`, one frame
+     - :math:`a`, 8 ms aggregate
+   * - N210, 1 MS/s
+     - best
+     - 0.64
+     - 0.83
+     - 0.76
+     - 0.10
+     - 0.10
+   * -
+     - untimed
+     - 0.48
+     - 0.67
+     - –
+     - 0.08
+     - 0.08
+   * -
+     - default
+     - 6.66
+     - 8.10
+     - 8.3
+     - 1.01
+     - 1.01
+   * - N210, 5 MS/s
+     - best
+     - 0.40
+     - 0.60
+     - 0.62
+     - 0.37
+     - 0.08
+   * -
+     - untimed
+     - 0.27
+     - 0.51
+     - –
+     - 0.31
+     - 0.06
+   * -
+     - default
+     - 5.48
+     - 5.89
+     - –
+     - 3.66
+     - 0.74
+   * - X310, 1 MS/s
+     - best
+     - 1.28
+     - 2.27
+     - 2.26
+     - 0.28
+     - 0.28
+   * -
+     - untimed
+     - 1.15
+     - 2.08
+     - –
+     - 0.26
+     - 0.26
+   * -
+     - default
+     - 13.06
+     - 20.90
+     - 21
+     - 2.60
+     - 2.61
+   * - X310, 5 MS/s
+     - best
+     - 0.45
+     - 0.65
+     - 0.64
+     - 0.40
+     - 0.08
+   * -
+     - untimed
+     - 0.26
+     - 0.45
+     - –
+     - 0.28
+     - 0.06
+   * -
+     - default
+     - 6.68
+     - 8.22
+     - –
+     - 5.11
+     - 1.03
+
+Settings: *best* is ``rx_max_samps_factor`` 1 with a timed reply 0.2 ms
+ahead; *untimed* is factor 1 with an untimed reply; *default* is factor 8
+with a 5 ms lead. :math:`a` uses :math:`D` p99, with one 8046-sample native
+frame (8 ms at 1 MS/s, 1.6 ms at 5 MS/s) or an 8 ms aggregate.
+
+What this shows:
+
+* **The parts add up.** The sum of the M2 and M3 parts predicted :math:`D`
+  p99 within 0.07 ms in every cell where it was computed, defaults
+  included. Each reacting node's own estimate of its delay, from the edge it
+  detected to the reply, matched the delay measured on the other node within
+  0.03 ms at p50 for timed replies. For untimed replies the gap was
+  0.01–0.08 ms, which is the send-to-air delay M3 measured.
+* **Untimed replies are fastest**, about 0.15 ms ahead of a timed reply with
+  a 0.2 ms lead. That matters most at 5 MS/s.
+* **What remains of** :math:`D` **is the receive chunk.** From p50 to p99,
+  :math:`D` spreads over about one chunk: 0.36 ms on the N210 at 1 MS/s,
+  2 ms on the X310 at 1 MS/s.
+* **Decision: "fast enough", confirmed on air** for an idle host. With
+  factor 1, :math:`a` at p99 is 0.08–0.10 on the N210 at 1 MS/s with single
+  frames, and 0.06–0.08 on both radios at 5 MS/s with 8 ms aggregates. The
+  X310 at 1 MS/s is marginal (0.26–0.28) because of its 1996-sample
+  packets. The radio's defaults give :math:`a` of 1 to 5, where CSMA loses
+  to slotted ALOHA.
+
+Things to know about the data:
+
+* In the X310 untimed cells at 1 MS/s, about 4% of pings show no reply,
+  though B replied to every ping. Those replies started within about
+  0.07 ms of the end of A's own 0.128 ms burst, so A's detector saw one
+  edge, not two. These are the fastest replies, so the low tail of these
+  two cells is cut off below about 0.2 ms, and p50 reads slightly high.
+  p99 is not affected.
+* grid01 at 5 MS/s with factor 8 again showed one-sample timestamp steps
+  (7304 in 60 s), the artifact seen in M2, with no effect on :math:`D`.
+* One untimed reply on the N210 at 5 MS/s took 5.8 ms; that cell's p99 is
+  0.48–0.51 ms.
+
+Still open:
+
+* These are idle hosts. A CSMA MAC needs its own sensing path on the raw
+  receive stream, ahead of the 14 ms channelizer, and has to hold factor 1
+  under demodulation load.
+* A smaller receive frame size on the X310 should bring the 1 MS/s case
+  down toward the N210's.
+
+Summaries and logs: ``simulation-results/sense-delay-m4-20261110`` (not
+committed), with ``m4-table.csv``; on gridgpu01, ``~/dragonradio-sense/m4``.
+The table comes from ``grid/sense-delay-m4-table.py`` on
+``codex/native-radiowars2024`` (``5d0b2c83``).
 
 Result and decision
 -------------------
