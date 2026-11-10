@@ -1,8 +1,10 @@
 Host sensing delay: measurement scope
 =====================================
 
-Status 2026-11-09: scope only. Nothing here has run. The measurement steps
-that transmit (M3 and M4) each need Kapil's go-ahead with an RF approval
+Status 2026-11-10: M0 (the probe) and M1 (the simulation check) are done on
+this branch; see `M0 and M1 results`_. M2 to M4 have not run, and the probe
+is not yet on the class-image port branch. The measurement steps that
+transmit (M3 and M4) each need Kapil's go-ahead with an RF approval
 reference, as usual, and none of them runs during OpenISAC.
 
 This scope covers the first item of work package 6 in
@@ -115,8 +117,9 @@ Steps
      - Radio use
      - Output
    * - M0
-     - **Probe and instrumentation.** A small C++ probe, ``tools/sense-delay``,
-       built on DragonRadio's ``UHDUSRP``, so ``recv`` behaves as it does in
+     - **Probe and instrumentation.** A small C++ probe
+       (``src/probe/SenseDelay.cc``, run by ``scripts/sense-delay.py``),
+       built on DragonRadio's ``USRP`` interface, so ``recv`` behaves as it does in
        the radio. Per chunk, it logs device time and host ``steady_clock``
        time. It calibrates the device-to-host clock offset once, at start,
        from the smallest round trip of repeated ``get_time_now`` calls,
@@ -171,6 +174,118 @@ Steps
 
 Total: about 1.5 weeks, including writing up the results. M0 and M1 need no
 radio time and can start now. M2 needs only a reservation.
+
+M0 and M1 results
+-----------------
+
+**The probe (M0).** ``src/probe/SenseDelay.{hh,cc}``, bound to Python as
+``runSenseDelay``. It is driven by ``scripts/sense-delay.py``, which runs with
+the radio executable. The probe calls ``burstRX`` once per receive chunk
+(``rx_max_samps``) and ``burstTX`` exactly as the radio does, and it works with
+both ``UHDUSRP`` and ``SimUSRP``; no production code changed. The script
+refuses to transmit on hardware without ``--tx-ok`` and caps the TX gain at
+20 dB. It prints a JSON summary of the arrival delay, the detector, the
+react and ping timings, late bursts, gaps between chunks (overflows) and
+clock drift. In simulation (M1):
+
+.. code-block:: bash
+
+   grid/run-sense-delay-sim.sh WORKSPACE OUTDIR [DURATION]
+
+For a hardware sweep (M2, receive only):
+
+.. code-block:: bash
+
+   dragonradio scripts/sense-delay.py --addr addr=ADDR --mode rx --rate 1e6 \
+       --rx-max-samps-factor 8 --duration 60 --out rx-f8.json
+
+**The simulation check (M1), 2026-11-10.** gridgpu01, 1 MS/s, 20 s per run,
+a 32-sample energy window and 128-sample bursts. In each pair run, node 1
+reacts to every edge and node 2 pings every 100 ms, hearing itself through
+-10 dB TX leakage. All 12 runs had no receive errors, no late bursts and no
+gaps between chunks. Every ping was answered, and one own ping was missed at
+the start of one run. Times are milliseconds.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 14 14 14 14 14
+
+   * - Case
+     - Chunk
+     - :math:`D_\mathrm{rx}` p50
+     - Planned :math:`D` p50 (node 1)
+     - Measured :math:`D` p50 (node 2)
+     - Measured :math:`D` min–max
+   * - Receive only, 2 ms latency, factor 1
+     - 1.02
+     - 2.13
+     - –
+     - –
+     - –
+   * - Receive only, 2 ms latency, factor 8
+     - 8.19
+     - 2.62
+     - –
+     - –
+     - –
+   * - Receive only, 10 ms latency, factor 1
+     - 1.02
+     - 10.13
+     - –
+     - –
+     - –
+   * - Receive only, 10 ms latency, factor 8
+     - 8.19
+     - 10.62
+     - –
+     - –
+     - –
+   * - Pair, 2 ms latency, 5 ms lead, factor 1
+     - 1.02
+     - 2.13
+     - 7.67
+     - 7.62
+     - 7.14–8.16
+   * - Pair, 2 ms latency, 5 ms lead, factor 8
+     - 8.19
+     - 2.62
+     - 11.81
+     - 11.81
+     - 7.78–15.78
+   * - Pair, 10 ms latency, 5 ms lead, factor 8
+     - 8.19
+     - 10.62
+     - 19.75
+     - 19.71
+     - 15.74–23.84
+   * - Pair, 2 ms latency, untimed reply, factor 1
+     - 1.02
+     - 2.13
+     - –
+     - 4.64
+     - 4.16–5.15
+
+What this shows:
+
+* **The probe works.** The arrival delay follows the simulated latency. The
+  extra 0.13 ms at factor 1, or 0.6 ms at factor 8, grows with the chunk,
+  so it is most likely the time ``SimUSRP`` spends generating the chunk after
+  its release time (not checked). The
+  end-to-end delay node 2 measures on its own clock agrees with the delay
+  node 1 planned to within 0.05 ms at the median. Node 2 sees its own ping
+  within 21 µs of the requested time, less than one window, so timed TX and
+  the detector are consistent.
+* **The model adds up.** :math:`D` is the wait for the rest of the chunk
+  (uniform between 0 and one chunk), plus :math:`D_\mathrm{rx}`, plus the
+  lead. With factor 8, the range of :math:`D` is a full chunk (8 ms) wide,
+  so the p99 pays the whole chunk. On hardware, the chunk matters twice:
+  once in the floor of :math:`D_\mathrm{rx}` and once in this spread.
+* **Detection costs nothing.** A reply was handed to ``burstTX`` 20–30 µs
+  after the edge was seen, and ``burstTX`` returned in under 0.1 ms.
+
+These numbers say nothing about real radios: the simulated latency is a
+setting. They check the instrument that M2 to M4 use. Raw summaries are in
+``simulation-results/sense-delay-m1-20261110`` (not committed).
 
 Result and decision
 -------------------

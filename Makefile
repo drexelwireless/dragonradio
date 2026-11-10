@@ -94,6 +94,7 @@ SOURCES := \
     phy/NativeOFDMA.cc \
     sim/SimTraffic.cc \
     sim/SimUSRP.cc \
+    probe/SenseDelay.cc \
     phy/OverlapTDChannelizer.cc \
     phy/PHY.cc \
     phy/RadioPacketQueue.cc \
@@ -129,6 +130,7 @@ SOURCES := \
     python/NCO.cc \
     python/NativePHY.cc \
     python/Sim.cc \
+    python/Probe.cc \
     python/Net.cc \
     python/PHY.cc \
     python/Packet.cc \
