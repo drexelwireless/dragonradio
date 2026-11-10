@@ -25,6 +25,7 @@ Welcome to DragonRadio's documentation!
    ota-fullstack-grid
    ota-study-plan
    development-plan-mac-sensing
+   sensing-delay-measurement
    teaching-notebooks-plan
    characterization
    container

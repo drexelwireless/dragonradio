@@ -207,7 +207,7 @@ depend on earlier ones.
    against a known signal.
 
 6. **Listen-before-talk CSMA** (4–8 weeks). Measure the host sensing delay
-   first. Add a MAC with energy-based sensing and random backoff. Sweep the
+   first (scoped in :doc:`sensing-delay-measurement`). Add a MAC with energy-based sensing and random backoff. Sweep the
    ratio of sensing delay to frame length. *Done when:* measured throughput
    follows the theoretical trend across that sweep, whether or not it beats
    ALOHA at every setting.
