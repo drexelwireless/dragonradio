@@ -24,7 +24,7 @@
 # Usage: build-notebook-layer.sh SRC_DIR [NBVENV] [JOBS]
 #   SRC_DIR  tree built by grid/build-in-class-image.sh (e.g. /tmp/drnb/dragonradio)
 #   NBVENV   default /tmp/drnb/nbvenv
-# Then: NBVENV/bin/jupyter lab --no-browser --ip=127.0.0.1
+# Then: NBVENV/bin/jupyter-lab --no-browser --ip=127.0.0.1
 set -euo pipefail
 src=$(realpath "$1"); nbvenv=${2:-/tmp/drnb/nbvenv}; jobs=${3:-$(nproc)}
 image=/usr/local/dragonradio
@@ -47,7 +47,7 @@ nbbuild=$nbvenv/dragonradio-build
 cmake -S "$src" -B "$nbbuild" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DCMAKE_CXX_FLAGS="-include cstdint -include cstdio" -DPython3_EXECUTABLE="$image/venv/bin/python" \
     -DDRAGONRADIO_NOTEBOOK=ON > "$nbvenv/cmake.log"
-make -C "$nbbuild" -j "$jobs" dragonradio > "$nbvenv/make.log"
+make -C "$nbbuild" -j "$jobs" dragonradio > "$nbvenv/make.log" 2>&1
 ln -sfn "$nbbuild/dragonradio" "$nbvenv/bin/dragonradio-python"
 
 kdir=$nbvenv/share/jupyter/kernels/dragonradio
@@ -65,5 +65,7 @@ EOF
 # Check: the layer's tools, and dragonradiocpp in the kernel's interpreter.
 "$nbvenv/bin/python" -c 'import jupyterlab, ipympl, papermill, nbclient, jupytext, myst_nb; print("nbvenv: jupyterlab", jupyterlab.__version__, "ipympl", ipympl.__version__, "papermill", papermill.__version__)'
 "$nbvenv/bin/dragonradio-python" -c 'import sys, dragonradiocpp.notebook, dragonradio.radio, ipykernel; print("kernel python:", sys.executable, "prefix", sys.prefix)' 2>&1 | grep -v -e '^linux; GNU C++' -e '^$' -e 'smallest subnormal' -e 'return self._float_to_str'
-"$nbvenv/bin/jupyter" kernelspec list
-echo "notebook layer ready: $nbvenv/bin/jupyter lab --no-browser --ip=127.0.0.1"
+# jupyter_core and jupyter_client come from the image, so NBVENV/bin has no
+# jupyter or jupyter-kernelspec; ask jupyter_client directly.
+"$nbvenv/bin/python" -c 'from jupyter_client.kernelspec import KernelSpecManager as K; print("kernels:", K().find_kernel_specs())'
+echo "notebook layer ready: $nbvenv/bin/jupyter-lab --no-browser --ip=127.0.0.1"
