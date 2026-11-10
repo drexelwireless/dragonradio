@@ -137,10 +137,16 @@ def analyze(r, args):
         own_off, gaps_d = [], []
         missed_own = missed_reply = 0
         for tp, hs in zip(r['ping_tx_dev'], r['ping_host_sent']):
+            # Timed: the own burst must start at the requested time (within
+            # a window or so). Untimed: it starts some time after burstTX
+            # returned, so look up to most of a period; the offset is then
+            # the untimed send-to-air delay.
+            span = L
             if not math.isfinite(tp):
-                tp = hs + off(hs)  # untimed: no better reference
+                tp = hs + off(hs)
+                span = 0.5*args.period
             i = bisect.bisect_left(edges, tp - 2*w)
-            if i >= len(edges) or edges[i] > tp + L:
+            if i >= len(edges) or edges[i] > tp + span:
                 missed_own += 1
                 continue
             e1 = edges[i]
@@ -151,10 +157,12 @@ def analyze(r, args):
                 continue
             gaps_d.append(edges[j] - e1)
         s['pings'] = len(r['ping_tx_dev'])
+        s['late_fraction'] = round(r['tx_late']/len(r['ping_tx_dev']), 4) if r['ping_tx_dev'] else None
         s['own_missed'] = missed_own
         s['reply_missed'] = missed_reply
         # Own edge against the requested TX time: checks timed TX and the
-        # detector (should be within about one window).
+        # detector (should be within about one window). For untimed bursts,
+        # against the time burstTX returned: the send-to-air delay.
         s['own_edge_offset_ms'] = ms(percentiles(own_off))
         # End-to-end sensing delay D: start of own burst to start of reply.
         s['d_total_ms'] = ms(percentiles(gaps_d))

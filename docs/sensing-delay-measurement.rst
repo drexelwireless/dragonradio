@@ -2,7 +2,8 @@ Host sensing delay: measurement scope
 =====================================
 
 Status 2026-11-10: M0, M1 and M2 are done; see `M0 and M1 results`_ and
-`M2 results`_. M3 and M4 have not run. The measurement steps that
+`M2 results`_. M3 is ready and waits for the RF go-ahead (`M3 plan (ready,
+needs the RF go-ahead)`_); M4 has not been prepared. The measurement steps that
 transmit (M3 and M4) each need Kapil's go-ahead with an RF approval
 reference, as usual, and none of them runs during OpenISAC.
 
@@ -480,6 +481,70 @@ What this shows:
 Summaries: ``simulation-results/sense-delay-m2-20261110`` (run 2) and
 ``sense-delay-m2-run1-20261110`` (run 1), not committed; on gridgpu01,
 ``~/dragonradio-sense``.
+
+M3 plan (ready, needs the RF go-ahead)
+-------------------------------------
+
+**What runs.** Each node in turn sends a short burst every 20 ms. Each burst
+is timed at the device time estimate plus a fixed lead. The node counts the
+bursts its radio reports late, and it hears its own bursts on its RX
+antenna, which shows whether each one left at the requested time. A late
+burst is dropped by the radio, so it is also missing on its own receiver;
+the two counts check each other. A 20 s cell has about 975 bursts. The
+cells are:
+
+* leads of 10, 5, 3, 2, 1.5, 1, 0.75, 0.5, 0.3, 0.2 and 0.1 ms, plus
+  untimed bursts;
+* each at 1 and 5 MS/s;
+
+so 24 cells, about 11 minutes per node.
+
+The untimed cells measure the delay from ``burstTX`` returning to the burst
+on air. That is the other way a reply can be sent.
+
+**RF.**
+
+* 1.322 GHz.
+* TX gain 0 dB (the scripts cap it at 20 dB).
+* A 128-sample tone at :math:`f_s/8` with 16-sample ramps, so 125 kHz or
+  625 kHz off the carrier. The sample rate is at most 5 MS/s, within the
+  5 MHz approval.
+* Duty cycle 0.6% at 1 MS/s and 0.13% at 5 MS/s.
+* Nodes run one at a time, so no node hears another's bursts.
+* A watcher checks every 30 s for an OpenISAC reservation. If one appears,
+  every node stops before its next 20 s cell. So at worst about 50 s of
+  this low-duty transmission could overlap the start of an OpenISAC run.
+
+**Nodes.** grid08 and grid01 (N210) and grid44 and grid53 (X310), as in M2.
+Expect about 50 minutes in a 2 h reservation.
+
+**How it runs.** On gridgpu01:
+
+.. code-block:: bash
+
+   bash ~/dragonradio-sense/bin/grid/sense-delay-m3-campaign.sh \
+       ~/dragonradio-port/ota-ws/ws-sense-462db648.tar.gz ~/dragonradio-sense/m3 \
+       grid08:N210 grid01:N210 grid44:X310 grid53:X310
+
+The scripts are on ``codex/native-radiowars2024`` at ``462db648``, local and
+not pushed. The C++ is unchanged since ``bdf2801e``, the M2 build.
+
+**Checked in simulation.** The simulated radio never reports a timed burst
+late, so it cannot answer M3; it only checks the plumbing. There, timed
+bursts were seen within 0.02 ms of the requested time at leads down to
+0.1 ms. Untimed bursts appeared 1.99 ms after ``burstTX`` returned, which
+is the simulated device's 2 ms send latency.
+
+**Limits of the method.**
+
+* The device time estimate is off by up to half a clock round trip, about
+  0.07 ms on an N210 and 0.01 ms on an X310. Leads below about 0.1 ms
+  therefore measure that error, not the radio.
+* The host is idle, as in M2.
+
+**Needs.** Your go-ahead to transmit, under the standing approvals:
+1.322 GHz, TX gain at most 20 dB (0 dB used), at most 5 MHz, and no
+transmission during OpenISAC.
 
 Result and decision
 -------------------
