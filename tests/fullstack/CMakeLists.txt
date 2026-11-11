@@ -4,6 +4,7 @@
 set(FULLSTACK_TESTS
   test_arq_syn
   test_fd_channelizer
+  test_iq_compression
   test_logger_chunks
   test_native_fec
   test_native_ofdm

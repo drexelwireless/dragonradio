@@ -1,5 +1,7 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
+#include <algorithm>
+
 #include <xsimd/xsimd.hpp>
 
 #include "IQCompression.hh"
@@ -9,13 +11,23 @@
 // we certainly don't get more than 14 :)
 constexpr unsigned kBits = 14;
 
-/** @brief Convert fc32_t IQ data to interleaved int32 format */
+/** @brief Convert fc32_t IQ data to interleaved int32 format
+ *
+ * Samples are scaled to kBits-bit signed integers and saturated to that range,
+ * as an ADC would. A value outside the declared bits per sample makes the FLAC
+ * encoder drop the block that contains it and every later block, so a single
+ * sample at or beyond full scale (|x| >= 1) used to truncate logged IQ there.
+ */
 void convert2int32(const fc32_t *in_, const size_t n, int32_t *out)
 {
     using vec_type = xsimd::simd_type<float>;
 
     constexpr float k = 1 << (kBits - 1);
+    constexpr float lo = -k;
+    constexpr float hi = k - 1;
     const vec_type  kvec(k);
+    const vec_type  lovec(lo);
+    const vec_type  hivec(hi);
 
     const float *in = reinterpret_cast<const float*>(in_);
 
@@ -25,13 +37,14 @@ void convert2int32(const fc32_t *in_, const size_t n, int32_t *out)
 
     for (size_t i = 0; i < vec_size; i += inc) {
         vec_type invec = xsimd::load_unaligned(&in[i]);
+        vec_type scaled = xsimd::min(xsimd::max(kvec*invec, lovec), hivec);
 
-        xsimd::store_unaligned(&out[i], xsimd::batch_cast<int32_t,float>(kvec*invec));
+        xsimd::store_unaligned(&out[i], xsimd::batch_cast<int32_t,float>(scaled));
     }
 
     // Remaining part that cannot be vectorized
     for (size_t i = vec_size; i < size; ++i)
-        out[i] = k*in[i];
+        out[i] = std::min(std::max(k*in[i], lo), hi);
 }
 
 template<class T>

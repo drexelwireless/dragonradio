@@ -523,14 +523,16 @@ class Log:
 
         # The packet's timestamp tells us which slot it was received in. We
         # assume there is only one slot with the given timestamp.
-        idx = slots['timestamp'] == pkt.slot_timestamp
+        matches = np.flatnonzero((slots['timestamp'] == pkt.slot_timestamp).to_numpy())
 
-        if not idx.any():
+        if len(matches) == 0:
             return None
 
-        # i_start and i_end are the range if indices (inclusive) of the slots
-        # spanned by the packet.
-        i_start = i_end = slots.index[idx].values[0]
+        # i_start and i_end are the range of positions (inclusive) of the
+        # slots spanned by the packet. Positions, not index labels: the slots
+        # are sliced with iloc.
+        i_start = i_end = int(matches[0])
+        lens = slots['iq_data_len'].to_numpy()
 
         # The packet may have started being received in the previous slot, in
         # which case start_samples will be negative. We must walk backwards
@@ -538,9 +540,17 @@ class Log:
         # started. We track the offset of sample index 0 of the packet.
         offset = 0
 
-        while offset + pkt.start_samples < 0:
+        while offset + pkt.start_samples < 0 and i_start > 0:
             i_start -= 1
-            offset += slots.iloc[i_start].iq_data_len
+            offset += int(lens[i_start])
+
+        # The packet may also end in a later slot: walk forwards until the
+        # slots cover its last sample.
+        total = int(lens[i_start:i_end+1].sum())
+
+        while offset + pkt.end_samples > total and i_end + 1 < len(slots):
+            i_end += 1
+            total += int(lens[i_end])
 
         return Slots(pkt, slots.iloc[i_start:i_end+1], offset)
 
