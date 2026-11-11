@@ -13,6 +13,7 @@
 #   PREFIX/nbvenv         JupyterLab layer and the dragonradio / drnb-python3 kernels
 #   PREFIX/etc/jupyter    server defaults (kernels allowed, default kernel)
 #   PREFIX/bin/drnb       the launcher (linked from /usr/local/bin/drnb)
+#   PREFIX/notebooks      starter notebooks (.ipynb from notebooks/start/*.py)
 #   PREFIX/MANIFEST.txt   commit, base image, versions
 #   /var/lib/drnb/slots   one lock file per launcher slot
 set -euo pipefail
@@ -52,6 +53,13 @@ c.ServerApp.ip = "127.0.0.1"
 c.ServerApp.open_browser = False
 EOF
 install -m 0755 "$tree/grid/drnb" "$prefix/bin/drnb"
+# Starter notebooks (jupytext .py sources -> .ipynb), copied to each user's
+# ~/drnb-notebooks by drnb on first use.
+mkdir -p "$prefix/notebooks"
+for py in "$tree"/notebooks/start/*.py; do
+  "$prefix/nbvenv/bin/jupytext" --quiet --to ipynb -o "$prefix/notebooks/$(basename "${py%.py}").ipynb" "$py"
+done
+ls "$prefix/notebooks"
 ln -sfn "$prefix/bin/drnb" /usr/local/bin/drnb
 mkdir -p /var/lib/drnb/slots
 for i in $(seq 0 63); do : > "/var/lib/drnb/slots/$i"; done
