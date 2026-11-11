@@ -59,7 +59,7 @@ from IPython.display import display
 TREE = os.environ.get("DRAGONRADIO_TREE", "/opt/drnb/dragonradio")
 RUNROOT = Path(os.environ.get("DRNB_RUNS", f"/tmp/drnb-{os.environ.get('USER', 'user')}/runs"))
 plt.rcParams["figure.figsize"] = (13, 8)
-plt.ioff()   # each view is shown once, after it is drawn (ipympl would also show it empty on creation)
+plt.ioff()   # show each figure once: drgui's views show themselves; other figures are displayed explicitly
 pd.set_option("display.max_colwidth", 120)
 
 # %% [markdown]
@@ -132,7 +132,6 @@ pd.DataFrame({n: dict(received=len(logs[n].recv), sent=len(logs[n].send), slots=
 # %%
 rx = viewer.rxView(RX_NODE)
 rx.plot(0)
-display(rx.fig.canvas)
 
 # %% [markdown]
 # ## Send view (node 1)
@@ -140,7 +139,6 @@ display(rx.fig.canvas)
 # %%
 tx = viewer.txView(TX_NODE)
 tx.plot(0)
-display(tx.fig.canvas)
 
 # %% [markdown]
 # ## Snapshot view (node 2)
@@ -154,7 +152,6 @@ display(tx.fig.canvas)
 start = len(logs[RX_NODE].snapshots) // 2   # mid-run: warm-up and drain are 4 s each
 snap = viewer.snapshotView(RX_NODE)
 snap.plot(start)
-display(snap.fig.canvas)
 
 # %% [markdown]
 # ## Event plot
