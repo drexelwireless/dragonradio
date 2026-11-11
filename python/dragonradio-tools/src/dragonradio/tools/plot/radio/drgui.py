@@ -524,26 +524,35 @@ class LogViewer:
                 del self.figures[key]
                 return
 
+    # show=False leaves showing the figure to the caller. In a notebook
+    # (ipympl), a figure shown before it is first drawn can stay blank until
+    # something redraws it, so draw first (view.plot(0)) and then display
+    # view.fig.canvas.
+
     @cached_fig
-    def rxView(self, node_id: int, nfft: int=256, show_header_invalid: bool=False, sigslop: int=0, **kwargs):
+    def rxView(self, node_id: int, nfft: int=256, show_header_invalid: bool=False, sigslop: int=0,
+               show: bool=True, **kwargs):
         view = ReceiveView(self.logs, self, node_id,
                            nfft=nfft,
                            show_header_invalid=show_header_invalid,
                            sigslop=sigslop,
                            **kwargs)
-        view.fig.show()
+        if show:
+            view.fig.show()
         return view
 
     @cached_fig
-    def txView(self, node_id: int, nfft: int=256):
+    def txView(self, node_id: int, nfft: int=256, show: bool=True):
         view = SendView(self.logs, self, node_id, nfft=nfft)
-        view.fig.show()
+        if show:
+            view.fig.show()
         return view
 
     @cached_fig
-    def snapshotView(self, node_id: int, nfft: int=256):
+    def snapshotView(self, node_id: int, nfft: int=256, show: bool=True):
         view = SnapshotView(self.logs, self, node_id, nfft=nfft)
-        view.fig.show()
+        if show:
+            view.fig.show()
         return view
 
 class DrGUICommand(Command):

@@ -276,11 +276,21 @@ class PAPRPlot(Plot):
     #   https://www.dsprelated.com/showarticle/962.php
     def plot(self, sig: np.ndarray, title: str='CCDF of PAPR'):
         P = sig.real**2 + sig.imag**2
+
+        self.ax.clear()
+
+        # With no signal there is nothing to put on a log axis, and drawing an
+        # empty log-scaled axis raises, which fails the whole figure's draw
+        # (in a notebook, the figure stays blank).
+        if len(P) == 0 or not np.any(P > 0):
+            self.ax.set_title(title)
+            self.ax.text(0.5, 0.5, 'no samples', ha='center', va='center', transform=self.ax.transAxes)
+            return
+
         Pratio = P/np.mean(P)
         with np.errstate(divide='ignore'):
             PdB = 10*np.log10(Pratio)
 
-        self.ax.clear()
         plotCCDF(self.ax, PdB)
         self.ax.set_title(title)
         self.ax.set_xlabel('$PAPR_0$ (dB)')
