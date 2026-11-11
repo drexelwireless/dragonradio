@@ -59,6 +59,7 @@ from IPython.display import display
 TREE = os.environ.get("DRAGONRADIO_TREE", "/opt/drnb/dragonradio")
 RUNROOT = Path(os.environ.get("DRNB_RUNS", f"/tmp/drnb-{os.environ.get('USER', 'user')}/runs"))
 plt.rcParams["figure.figsize"] = (13, 8)
+plt.ioff()   # each view is shown once, after it is drawn (ipympl would also show it empty on creation)
 pd.set_option("display.max_colwidth", 120)
 
 # %% [markdown]
@@ -131,6 +132,7 @@ pd.DataFrame({n: dict(received=len(logs[n].recv), sent=len(logs[n].send), slots=
 # %%
 rx = viewer.rxView(RX_NODE)
 rx.plot(0)
+display(rx.fig.canvas)
 
 # %% [markdown]
 # ## Send view (node 1)
@@ -138,16 +140,21 @@ rx.plot(0)
 # %%
 tx = viewer.txView(TX_NODE)
 tx.plot(0)
+display(tx.fig.canvas)
 
 # %% [markdown]
 # ## Snapshot view (node 2)
 #
-# Raw IQ of the whole channel, captured once a second for 0.1 s. Look for
-# both nodes' bursts in their TDMA slots.
+# Raw IQ of the whole channel, captured once a second for 0.1 s. The view
+# opens at a snapshot from the middle of the run, while traffic is flowing (the
+# first few are from the warm-up, before any packets). Look for both nodes' bursts in their
+# TDMA slots, and step back with Previous to see the empty channel.
 
 # %%
+start = len(logs[RX_NODE].snapshots) // 2   # mid-run: warm-up and drain are 4 s each
 snap = viewer.snapshotView(RX_NODE)
-snap.plot(0)
+snap.plot(start)
+display(snap.fig.canvas)
 
 # %% [markdown]
 # ## Event plot
@@ -161,6 +168,7 @@ for n in sorted(logs.nodes, reverse=True):
     ev.addEventCategory(n, "SEND", ppr=pprSentPacket)
     ev.addEventCategory(n, "RECV", ppr=pprReceivedPacket)
 ev.plot()
+display(ev.fig.canvas)
 
 # %% [markdown]
 # ## Try next
