@@ -52,6 +52,17 @@ c.MultiKernelManager.default_kernel_name = "drnb-python3"
 c.ServerApp.ip = "127.0.0.1"
 c.ServerApp.open_browser = False
 EOF
+# JupyterLab: no news pop-up and no update checks (they ask each user, and the
+# image is offline-pinned anyway).
+mkdir -p "$prefix/nbvenv/share/jupyter/lab/settings"
+cat > "$prefix/nbvenv/share/jupyter/lab/settings/overrides.json" <<'EOF'
+{
+  "@jupyterlab/apputils-extension:notification": {
+    "fetchNews": "false",
+    "checkForUpdates": false
+  }
+}
+EOF
 install -m 0755 "$tree/grid/drnb" "$prefix/bin/drnb"
 # Starter notebooks (jupytext .py sources -> .ipynb), copied to each user's
 # ~/drnb-notebooks by drnb on first use.

@@ -43,6 +43,10 @@ DURATION = 6.0           # seconds of traffic
 RX_NODE, TX_NODE = 2, 1  # node 1 sends to node 2 in every scenario above
 
 # %%
+# NumPy warns, harmlessly, about float subnormals when the radio's Python starts.
+import warnings
+warnings.filterwarnings("ignore", message="The value of the smallest subnormal")
+
 # %matplotlib widget
 
 # %%
@@ -58,8 +62,8 @@ from IPython.display import display
 
 TREE = os.environ.get("DRAGONRADIO_TREE", "/opt/drnb/dragonradio")
 RUNROOT = Path(os.environ.get("DRNB_RUNS", f"/tmp/drnb-{os.environ.get('USER', 'user')}/runs"))
-plt.rcParams["figure.figsize"] = (13, 8)
-plt.ioff()   # show each figure once: drgui's views show themselves; other figures are displayed explicitly
+plt.rcParams["figure.figsize"] = (9.5, 7)   # fits the notebook column; drgui's views use this size
+plt.ioff()   # each figure is drawn first, then displayed once (a figure shown before its first draw can stay blank)
 pd.set_option("display.max_colwidth", 120)
 
 # %% [markdown]
@@ -130,15 +134,17 @@ pd.DataFrame({n: dict(received=len(logs[n].recv), sent=len(logs[n].send), slots=
 # symbols yet.
 
 # %%
-rx = viewer.rxView(RX_NODE)
+rx = viewer.rxView(RX_NODE, show=False)
 rx.plot(0)
+display(rx.fig.canvas)
 
 # %% [markdown]
 # ## Send view (node 1)
 
 # %%
-tx = viewer.txView(TX_NODE)
+tx = viewer.txView(TX_NODE, show=False)
 tx.plot(0)
+display(tx.fig.canvas)
 
 # %% [markdown]
 # ## Snapshot view (node 2)
@@ -150,8 +156,9 @@ tx.plot(0)
 
 # %%
 start = len(logs[RX_NODE].snapshots) // 2   # mid-run: warm-up and drain are 4 s each
-snap = viewer.snapshotView(RX_NODE)
+snap = viewer.snapshotView(RX_NODE, show=False)
 snap.plot(start)
+display(snap.fig.canvas)
 
 # %% [markdown]
 # ## Event plot
@@ -177,6 +184,12 @@ display(ev.fig.canvas)
 # 3. **PHY.** Rerun `clean-arq` with `PHY = "native"`. Compare the spectrogram
 #    and the latency with liquid.
 #
-# Known limits of this first version: the receive view's IQ window can be
-# offset from the packet in simulated logs, and drgui's traffic plot does not
-# yet work with this matplotlib version.
+# Notes. Logged IQ is stored with 14 bits, like the X310's ADC, so samples at
+# or above full scale are clipped in the logs (the radio itself demodulated the
+# unclipped signal). drgui's traffic plot does not yet work with this
+# matplotlib version.
+#
+# **If a control does not respond:** click once on the figure first; while the
+# figure has focus, keys are matplotlib shortcuts (`p` pan, `o` zoom), so
+# press the same key again to leave that mode. You can also move from code:
+# `rx.plot(5)` shows received packet 5.
