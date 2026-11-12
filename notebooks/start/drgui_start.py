@@ -62,8 +62,12 @@ from IPython.display import display
 
 TREE = os.environ.get("DRAGONRADIO_TREE", "/opt/drnb/dragonradio")
 RUNROOT = Path(os.environ.get("DRNB_RUNS", f"/tmp/drnb-{os.environ.get('USER', 'user')}/runs"))
-plt.rcParams["figure.figsize"] = (9.5, 7)   # fits the notebook column; drgui's views use this size
-plt.ioff()   # each figure is drawn first, then displayed once (a figure shown before its first draw can stay blank)
+plt.rcParams["figure.figsize"] = (8, 6)   # fits the notebook column; drgui's views use this size
+# ipympl sends only changed pixels after the first image; on a HiDPI screen the
+# first resize can leave a figure partly drawn. Any non-opaque pixel makes
+# matplotlib send whole images, so give figures a 99%-opaque background.
+plt.rcParams["figure.facecolor"] = (1, 1, 1, 0.99)
+plt.ioff()   # each figure is displayed once, empty, and then drawn (the order ipympl handles reliably)
 pd.set_option("display.max_colwidth", 120)
 
 # %% [markdown]
@@ -135,16 +139,16 @@ pd.DataFrame({n: dict(received=len(logs[n].recv), sent=len(logs[n].send), slots=
 
 # %%
 rx = viewer.rxView(RX_NODE, show=False)
-rx.plot(0)
 display(rx.fig.canvas)
+rx.plot(0)
 
 # %% [markdown]
 # ## Send view (node 1)
 
 # %%
 tx = viewer.txView(TX_NODE, show=False)
-tx.plot(0)
 display(tx.fig.canvas)
+tx.plot(0)
 
 # %% [markdown]
 # ## Snapshot view (node 2)
@@ -157,8 +161,8 @@ display(tx.fig.canvas)
 # %%
 start = len(logs[RX_NODE].snapshots) // 2   # mid-run: warm-up and drain are 4 s each
 snap = viewer.snapshotView(RX_NODE, show=False)
-snap.plot(start)
 display(snap.fig.canvas)
+snap.plot(start)
 
 # %% [markdown]
 # ## Event plot
@@ -167,12 +171,12 @@ display(snap.fig.canvas)
 # toolbar to see individual slots, retransmissions and ACKs.
 
 # %%
-ev = EventPlot(logs)
+ev = EventPlot(logs, fig=plt.figure(figsize=(8, 3.5)))
+display(ev.fig.canvas)
 for n in sorted(logs.nodes, reverse=True):
     ev.addEventCategory(n, "SEND", ppr=pprSentPacket)
     ev.addEventCategory(n, "RECV", ppr=pprReceivedPacket)
 ev.plot()
-display(ev.fig.canvas)
 
 # %% [markdown]
 # ## Try next

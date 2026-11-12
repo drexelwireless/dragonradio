@@ -52,6 +52,15 @@ c.MultiKernelManager.default_kernel_name = "drnb-python3"
 c.ServerApp.ip = "127.0.0.1"
 c.ServerApp.open_browser = False
 EOF
+# ipympl 0.10.0 stores a figure drawn before its browser view attaches as bare
+# base64 in _data_url, which the browser uses as an <img> src: the image is
+# broken, setting the widget state fails and the figure stays blank. Store a
+# complete data URL, as ipympl's own _repr_mimebundle_ does.
+mpl=$("$prefix/nbvenv/bin/python" -c 'import ipympl.backend_nbagg as m; print(m.__file__)')
+grep -q "self._data_url = b64encode(png.getvalue()).decode('utf-8')" "$mpl" \
+  || { echo "ipympl changed: check the _data_url patch in build-nb-image.sh" >&2; exit 1; }
+sed -i "s|self._data_url = b64encode(png.getvalue()).decode('utf-8')|self._data_url = 'data:image/png;base64,' + b64encode(png.getvalue()).decode('utf-8')|" "$mpl"
+find "$(dirname "$mpl")" -name '*.pyc' -delete
 # JupyterLab: no news pop-up and no update checks (they ask each user, and the
 # image is offline-pinned anyway).
 mkdir -p "$prefix/nbvenv/share/jupyter/lab/settings"
