@@ -101,7 +101,8 @@ class ReceiveView(LogView):
                  nfft: int=256,
                  sigslop: int =0,
                  annotate: bool=False,
-                 sticky: bool=False):
+                 sticky: bool=False,
+                 controls: bool=True):
         super().__init__(logs, viewer, node_id)
 
         self.show_header_invalid = show_header_invalid
@@ -121,6 +122,14 @@ class ReceiveView(LogView):
 
         # Handle close event for figure
         self.fig.canvas.mpl_connect('close_event', self.on_close)
+
+        self.specgram.pick_artist = self.pick_artist
+
+        # controls=False leaves out drgui's own buttons and slider, for callers
+        # (such as notebook widgets) that provide their own controls.
+        self.spos = None
+        if not controls:
+            return
 
         # Add next and prev buttons. Coordinates are:
         #   posx, posy, width, height
@@ -147,8 +156,6 @@ class ReceiveView(LogView):
                            valstep=1)
         self.spos.on_changed(self.update_slider)
 
-        self.specgram.pick_artist = self.pick_artist
-
     def received(self, node_id: int):
         recv = self.logs[node_id].recv
         if self.show_header_invalid:
@@ -162,7 +169,8 @@ class ReceiveView(LogView):
         if idx >= 0 and idx < len(recv):
             self.pktidx = idx
             self.pkt = recv.iloc[idx]
-            self.spos.set_val(idx)
+            if self.spos is not None:
+                self.spos.set_val(idx)
 
             slots = self.logs.findPacketSlots(self.pkt, self.node_id)
             if slots == None:
@@ -334,7 +342,8 @@ class SendView(LogView):
                  logs: LogCollection,
                  viewer: 'LogViewer',
                  node_id: int,
-                 nfft: int=256):
+                 nfft: int=256,
+                 controls: bool=True):
         super().__init__(logs, viewer, node_id)
 
         self.pktidx = 0
@@ -347,6 +356,10 @@ class SendView(LogView):
 
         # Handle close event for figure
         self.fig.canvas.mpl_connect('close_event', self.on_close)
+
+        self.spos = None
+        if not controls:
+            return
 
         # Add next and prev buttons. Coordinates are:
         #   posx, posy, width, height
@@ -378,7 +391,8 @@ class SendView(LogView):
         if idx >= 0 and idx < len(send):
             self.pktidx = idx
             self.pkt = send.iloc[idx]
-            self.spos.set_val(idx)
+            if self.spos is not None:
+                self.spos.set_val(idx)
 
             self.set_window_title('Node {} Sent Packets'.format(self.node_id))
             self.fig.suptitle('Packet {} to node {}'.format(self.pkt.seq, self.pkt.dest))
@@ -421,7 +435,8 @@ class SnapshotView(LogView):
                  logs: LogCollection,
                  viewer: 'LogViewer',
                  node_id: int,
-                 nfft: int=256):
+                 nfft: int=256,
+                 controls: bool=True):
         super().__init__(logs, viewer, node_id)
 
         self.snapshotidx = 0
@@ -429,6 +444,10 @@ class SnapshotView(LogView):
         self.fig = plt.figure()
         self.specgram = SpecgramPlot(self.fig, self.fig.add_subplot(2,1,1), nfft=nfft)
         self.psd = PSDPlot(self.fig, self.fig.add_subplot(2,1,2), nfft=nfft)
+
+        self.spos = None
+        if not controls:
+            return
 
         # Add next and prev buttons. Coordinates are:
         #   posx, posy, width, height
@@ -454,7 +473,8 @@ class SnapshotView(LogView):
             self.snapshotidx = idx
 
             snapshot = self.snapshots.iloc[idx]
-            self.spos.set_val(idx)
+            if self.spos is not None:
+                self.spos.set_val(idx)
 
             sig = decompressIQData(snapshot.iq_data)
 

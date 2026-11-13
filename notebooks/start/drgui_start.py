@@ -20,12 +20,8 @@
 # transmitted. It then opens the same views as the `drgui` tool on the run's
 # logs:
 #
-# * **Receive view:** a spectrogram of the received slots with each packet
-#   bracketed, and below it the selected packet's constellation, waveform,
-#   power spectral density and PAPR. Step through packets with the slider and
-#   the Next/Prev buttons. *Link to TX* opens the packet's transmission.
-# * **Send view:** the same panels for transmitted packets.
-# * **Snapshot view:** short raw IQ captures of the whole channel.
+# * **Receive, send and snapshot views,** with notebook controls to choose the
+#   node and step through packets or snapshots.
 # * **Event plot:** sends and receives at both nodes on one time line.
 #
 # **How to use it.** Set the parameters in the next cell, then
@@ -119,50 +115,51 @@ display(links[[c for c in ["frames_sent", "frames_received", "frame_delivery", "
 
 # %%
 from dragonradio.tools.logging import LogCollection
-from dragonradio.tools.plot.radio.drgui import LogViewer
 from dragonradio.tools.plot.radio.plot import EventPlot, pprReceivedPacket, pprSentPacket
 
 logs = LogCollection()
 logs.load(sorted(str(p) for p in (rundir / SCENARIO / "logs").glob("node-*/radio.h5")))
-viewer = LogViewer(logs)
 pd.DataFrame({n: dict(received=len(logs[n].recv), sent=len(logs[n].send), slots=len(logs[n].slots),
                       snapshots=len(logs[n].snapshots)) for n in sorted(logs.nodes)})
 
 # %% [markdown]
-# ## Receive view (node 2)
+# ## Explore the run: drgui's views with controls
 #
-# Top: spectrogram of the received slots; the selected packet is bracketed.
-# Bottom, left to right: constellation, waveform, PSD and PAPR of that packet.
-# Use the slider or Next/Prev to move between packets. With `PHY = "native"`
-# the constellation stays empty, because the native PHY does not log received
-# symbols yet.
+# The same panels as `drgui`, with notebook controls above them:
+#
+# * **Receive / Send / Snapshot** picks the view and **Node** the radio.
+#   * **Receive:** a spectrogram of the received slots with each packet
+#     bracketed, then the selected packet's constellation, waveform, power
+#     spectral density and PAPR.
+#   * **Send:** the same panels for a transmitted packet.
+#   * **Snapshot:** 0.1 s raw IQ captures of the whole channel.
+# * **Moving through packets:**
+#   * the **slider**, **◀ Previous / Next ▶**, or **▶ (Play)**, which steps
+#     through them on its own;
+#   * **Seq** + **Go**, which jumps to a sequence number. Press Go again for
+#     its retransmission.
+# * **Link to TX / Link to RX** follows the packet to the radio that sent or
+#   received it.
+# * **Packets** (receive view) steps through valid headers (drgui's default),
+#   all packets, or only those whose payload failed.
+# * **Overlays.** The checkboxes turn the spectrogram overlays on and off.
+#   **Time zoom** zooms the spectrogram. **FFT** and **Extra samples** match
+#   drgui's `--nfft` and `--sigslop`.
+#
+# The table on the right lists the selected packet's fields. With
+# `PHY = "native"` the received constellation stays empty, because the native
+# PHY does not log received symbols yet.
 
 # %%
-rx = viewer.rxView(RX_NODE, show=False)
-display(rx.fig.canvas)
-rx.plot(0)
+from dragonradio.tools.plot.radio.notebook import DrGUI
+
+gui = DrGUI(logs, view="receive", node=RX_NODE)
+gui.show()
 
 # %% [markdown]
-# ## Send view (node 1)
-
-# %%
-tx = viewer.txView(TX_NODE, show=False)
-display(tx.fig.canvas)
-tx.plot(0)
-
-# %% [markdown]
-# ## Snapshot view (node 2)
-#
-# Raw IQ of the whole channel, captured once a second for 0.1 s. The view
-# opens at a snapshot from the middle of the run, while traffic is flowing (the
-# first few are from the warm-up, before any packets). Look for both nodes' bursts in their
-# TDMA slots, and step back with Previous to see the empty channel.
-
-# %%
-start = len(logs[RX_NODE].snapshots) // 2   # mid-run: warm-up and drain are 4 s each
-snap = viewer.snapshotView(RX_NODE, show=False)
-display(snap.fig.canvas)
-snap.plot(start)
+# You can also drive it from code, for example `gui.view = "send"`,
+# `gui.node = 1`, `gui.index = 20`. `gui.current` is the drgui view object
+# underneath.
 
 # %% [markdown]
 # ## Event plot
@@ -193,7 +190,5 @@ ev.plot()
 # unclipped signal). drgui's traffic plot does not yet work with this
 # matplotlib version.
 #
-# **If a control does not respond:** click once on the figure first; while the
-# figure has focus, keys are matplotlib shortcuts (`p` pan, `o` zoom), so
-# press the same key again to leave that mode. You can also move from code:
-# `rx.plot(5)` shows received packet 5.
+# **If the figure's toolbar is stuck in pan or zoom:** click its pan or zoom
+# button again. The packet controls above the figure are not affected.
